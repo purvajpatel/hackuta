@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Program Generator - Terminal Interface</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Welcome Dropdown -->
+    <div class="welcome-overlay" id="welcome-overlay">
+        <div class="welcome-dropdown">
+            <div class="welcome-adg">
+                <h1>Welcome To AI Program Generator</h1>
+            </div>
+            <div class="welcome-content">
+                <p>This is a revolutionary AI system that generates <strong>domain-specific programming languages</strong> from natural language descriptions!</p>
+                <div class="example-section">
+                    <h3>Example: Stock Market Language</h3>
+                    <div class="example-box">
+                        <p><strong>You say:</strong> "Create a Pythonic language with advanced stock market functions for technical analysis"</p>
+                        <p><strong>Compiler AI:</strong> Generates a complete domain-specific language with built-in functions like:</p>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li><code>calculate_moving_average(stock, period)</code></li>
+                            <li><code>detect_support_resistance(price_data)</code></li>
+                            <li><code>analyze_volume_patterns(ticker)</code></li>
+                            <li><code>backtest_strategy(strategy, start_date, end_date)</code></li>
+                        </ul>
+                        <p><strong>Interpreter AI:</strong> Executes your custom language with real-time market data integration</p>
+                    </div>
+                </div>
+                <div class="instructions">
+                    <p>Type <span class="command">help</span> for available commands</p>
+                    <p>Describe any domain-specific language you want to create!</p>
+                    <p><em>Examples: "Create a language for data science", "Build a game development language", "Make a language for IoT devices"</em></p>
+                </div>
+            </div>
+            <div class="welcome-footer">
+                <button class="start-button" id="start-button">Start Terminal</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="terminal-container" id="terminal-container" style="display: none;">
+        <div class="terminal-header">
+            <div class="terminal-buttons">
+                <span class="btn close"></span>
+                <span class="btn minimize"></span>
+                <span class="btn maximize"></span>
+            </div>
+            <div class="terminal-title">AI Program Generator</div>
+        </div>
+        
+        <!-- Terminal Tabs -->
+        <div class="terminal-tabs">
+            <div class="tab active" data-tab="main">
+                <span class="tab-icon">💻</span>
+                <span class="tab-title">Main Terminal</span>
+                <span class="tab-close">×</span>
+            </div>
+            <div class="tab" data-tab="console">
+                <span class="tab-icon">⚡</span>
+                <span class="tab-title">Program Console</span>
+                <span class="tab-close">×</span>
+            </div>
+            <div class="tab" data-tab="docs">
+                <span class="tab-icon">📚</span>
+                <span class="tab-title">Documentation</span>
+                <span class="tab-close">×</span>
+            </div>
+            <div class="tab-add">+</div>
+        </div>
+        
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Tab Content Areas -->
+            <div class="tab-content">
+                <!-- Main Terminal Tab -->
+                <div class="tab-pane active" id="main-tab">
+                    <div class="terminal-body">
+                        <div class="terminal-content" id="terminal-content">
+                            <div class="terminal-line">
+                                <span class="prompt">ai@programmer:~$</span>
+                                <span class="welcome-text">Welcome to the AI Program Generator!</span>
+                            </div>
+                            <div class="terminal-line">
+                                <span class="info-text">This system consists of two AI components:</span>
+                            </div>
+                            <div class="terminal-line">
+                                <span class="info-text">• Compiler AI: Converts natural language to structured program configs</span>
+                            </div>
+                            <div class="terminal-line">
+                                <span class="info-text">• Interpreter AI: Executes programs with interactive user input</span>
+                            </div>
+                            <div class="terminal-line">
+                                <span class="info-text">Type your program description in plain English below:</span>
+                            </div>
+                            <div class="terminal-line">
+                                <span class="prompt">ai@programmer:~$</span>
+                                <span class="cursor-blink">_</span>
+                            </div>
+                        </div>
+                        
+                        <div class="input-container">
+                            <span class="prompt">ai@programmer:~$</span>
+                            <input type="text" id="command-input" class="command-input" placeholder="Describe your program..." autofocus>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Program Console Tab -->
+                <div class="tab-pane" id="console-tab">
+                    <div class="console-header">
+                        <div class="console-title">Program Execution Console</div>
+                        <div class="console-controls">
+                            <button class="console-btn" id="clear-console">Clear</button>
+                            <button class="console-btn" id="pause-console">Pause</button>
+                            <button class="console-btn" id="stop-console">Stop</button>
+                        </div>
+                    </div>
+                    <div class="console-body">
+                        <div class="console-output" id="console-output">
+                            <div class="console-line">
+                                <span class="console-prompt">console@execution:~$</span>
+                                <span class="console-text">Program console ready. Execute a program to see output here.</span>
+                            </div>
+                        </div>
+                        <div class="console-input-area" id="console-input-area" style="display: none;">
+                            <div class="console-input-prompt">
+                                <span class="console-prompt">input@program:~$</span>
+                                <input type="text" id="console-input" class="console-input" placeholder="Enter your input...">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documentation Tab -->
+                <div class="tab-pane" id="docs-tab">
+                    <div class="docs-content">
+                        <div class="docs-section">
+                            <h2>AI Domain-Specific Language Generator</h2>
+                            <p>This revolutionary system generates complete programming languages tailored to specific domains from natural language descriptions. Perfect for creating specialized languages for finance, data science, gaming, IoT, and more!</p>
+                        </div>
+
+                        <div class="docs-section">
+                            <h3>Compiler AI - Language Designer</h3>
+                            <p>The Compiler AI is a sophisticated language designer that interprets your domain requirements and generates complete programming languages with domain-specific syntax, functions, and libraries.</p>
+                            <ul>
+                                <li>Analyzes domain requirements in natural language</li>
+                                <li>Generates complete language syntax and grammar</li>
+                                <li>Creates domain-specific function libraries and APIs</li>
+                                <li>Designs type systems optimized for the target domain</li>
+                                <li>Builds integrated development environments</li>
+                            </ul>
+                        </div>
+
+                        <div class="docs-section">
+                            <h3>Interpreter AI - Language Runtime</h3>
+                            <p>The Interpreter AI provides a complete runtime environment for your custom language, with real-time execution, debugging, and domain-specific integrations.</p>
+                            <ul>
+                                <li>Executes your custom language in real-time</li>
+                                <li>Provides domain-specific data integrations (APIs, databases, etc.)</li>
+                                <li>Handles interactive debugging and development</li>
+                                <li>Manages language-specific optimizations</li>
+                                <li>Supports hot-reloading and live development</li>
+                            </ul>
+                        </div>
+
+                        <div class="docs-section">
+                            <h3>Available Commands</h3>
+                            <div class="command-list">
+                                <div class="command-item">
+                                    <span class="command-name">help</span>
+                                    <span class="command-desc">Show available commands and usage information</span>
+                                </div>
+                                <div class="command-item">
+                                    <span class="command-name">clear</span>
+                                    <span class="command-desc">Clear the terminal output</span>
+                                </div>
+                                <div class="command-item">
+                                    <span class="command-name">status</span>
+                                    <span class="command-desc">Display system status and current language information</span>
+                                </div>
+                                <div class="command-item">
+                                    <span class="command-name">run [language]</span>
+                                    <span class="command-desc">Execute code in a previously created domain-specific language</span>
+                                </div>
+                                <div class="command-item">
+                                    <span class="command-name">[description]</span>
+                                    <span class="command-desc">Create a new domain-specific language from natural language description</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="docs-section">
+                            <h3>Example Domain-Specific Languages</h3>
+                            <div class="example-programs">
+                                <div class="example-program">
+                                    <h4>Stock Market Language</h4>
+                                    <p>"Create a Pythonic language with advanced stock market functions for technical analysis and algorithmic trading"</p>
+                                    <div class="language-features">
+                                        <strong>Built-in functions:</strong> Moving averages, RSI, MACD, Bollinger Bands, Volume analysis, Backtesting
+                                    </div>
+                                </div>
+                                <div class="example-program">
+                                    <h4>Data Science Language</h4>
+                                    <p>"Build a language optimized for data science with built-in statistical functions and visualization"</p>
+                                    <div class="language-features">
+                                        <strong>Built-in functions:</strong> Statistical analysis, Machine learning pipelines, Data visualization, ETL operations
+                                    </div>
+                                </div>
+                                <div class="example-program">
+                                    <h4>Game Development Language</h4>
+                                    <p>"Create a language for game development with physics, graphics, and audio functions"</p>
+                                    <div class="language-features">
+                                        <strong>Built-in functions:</strong> Physics simulation, Sprite management, Audio processing, Collision detection
+                                    </div>
+                                </div>
+                                <div class="example-program">
+                                    <h4>IoT Language</h4>
+                                    <p>"Make a language for IoT devices with sensor integration and network communication"</p>
+                                    <div class="language-features">
+                                        <strong>Built-in functions:</strong> Sensor reading, MQTT communication, Device control, Data logging
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side Output Panel -->
+        <div class="output-panel" id="output-panel" style="display: none;">
+            <div class="output-header">
+                <div class="output-title">📊 Program Outputs</div>
+                <div class="output-controls">
+                    <button class="output-btn" id="clear-outputs">Clear</button>
+                    <button class="output-btn" id="close-outputs">×</button>
+                </div>
+            </div>
+            <div class="output-body">
+                <div class="output-content" id="output-content">
+                    <div class="output-section">
+                        <h4>Execution Results</h4>
+                        <div class="output-results" id="output-results">
+                            <p class="output-placeholder">Program outputs will appear here...</p>
+                        </div>
+                    </div>
+                    <div class="output-section">
+                        <h4>Variable States</h4>
+                        <div class="output-variables" id="output-variables">
+                            <p class="output-placeholder">Variable states will be tracked here...</p>
+                        </div>
+                    </div>
+                    <div class="output-section">
+                        <h4>Function Calls</h4>
+                        <div class="output-functions" id="output-functions">
+                            <p class="output-placeholder">Function execution logs will appear here...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar" id="status-bar" style="display: none;">
+        <div class="status-item">
+            <span class="status-label">STATUS:</span>
+            <span class="status-value online">ONLINE</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">COMPILER AI:</span>
+            <span class="status-value ready">READY</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">INTERPRETER AI:</span>
+            <span class="status-value ready">READY</span>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
