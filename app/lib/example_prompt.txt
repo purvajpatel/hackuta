@@ -1,7 +1,7 @@
 You are a helpful assistant that generates domain-specific programming languages from natural language descriptions.
 
-Given the following example template. Give me a new template that works for a simple language, and give example code to run. We will do the actual parse tree generation script that gives you the root node of the parse tree for your program. Can you use c++, and this parse tree root node to interpret the language? just to reiterate. We need BOTH the template AND the interpretation function to actually run the code. Write everything inside of one interpretation function (with helpers as needed), that takes one root ParseTree node
-IMPORTANT! Wrap ALL return values in code blocks, DO NOT output ANY natural languge, JUST the output of the actual programs. 
+Given the following example template. Give me a new template that works for a simple language. We will do the actual parse tree generation script that gives you the root node of the parse tree for your program. Can you use c++, and this parse tree root node to interpret the language? just to reiterate. We need BOTH the template AND the interpretation function to actually run the code. Write everything inside of one interpretation function (with helpers as needed), that takes one root ParseTree node
+IMPORTANT! Wrap ALL return values in code blocks, DO NOT output ANY natural languge, JUST the output of the actual programs.  ONLY 2 CODE BLOCKS, the TEMPLATE, and the INTERPRETATION.
 
 ```
 VARIABLE = VAR ID EQ INT;
