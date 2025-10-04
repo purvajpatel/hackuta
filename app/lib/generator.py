@@ -8,7 +8,7 @@ prompt_txt = open(os.path.join(os.path.dirname(__file__), 'example_prompt.txt'))
 
 client = OpenAI(
     api_key=os.getenv('GEMINI_API_KEY'),
-    base_url=os.getenv('GEMINI_API_BASE', "https://api.gemini.google.com/v1")
+    base_url=os.getenv('GEMINI_API_BASE', "https://generativelanguage.googleapis.com/v1beta/openai/")
 )
 
 
@@ -24,4 +24,4 @@ def generate_program(description):
 
 
 if __name__ == "__main__":
-    print(generate_program("Create a language for game development with physics, graphics, and audio functions"))
+    print(generate_program("Generate me a pythonic language with advanced stock market builtin functions for technical analysis."))

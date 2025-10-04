@@ -1,0 +1,421 @@
+```
+PROGRAM = STATEMENT+;
+
+STATEMENT = ASSIGNMENT | PRINT_STMT | IF_STMT;
+
+ASSIGNMENT = VAR ID EQ EXPRESSION;
+PRINT_STMT = PRINT LPAREN EXPRESSION RPAREN;
+IF_STMT = IF EXPRESSION COLON PROGRAM (ELSE COLON PROGRAM)? ENDIF;
+
+# Operator precedence
+EXPRESSION = COMP_EXPR;
+COMP_EXPR = ADD_EXPR ((GT | LT | GTE | LTE | EQEQ | NEQ) ADD_EXPR)?;
+ADD_EXPR = MUL_EXPR ((PLUS | MINUS) MUL_EXPR)*;
+MUL_EXPR = ATOM ((STAR | SLASH) ATOM)*;
+ATOM = NUMBER | STRING | ID | FUNCTION_CALL | LPAREN EXPRESSION RPAREN;
+
+FUNCTION_CALL = ID LPAREN ARGS? RPAREN;
+ARGS = EXPRESSION (COMMA EXPRESSION)*;
+
+tok VAR = "var"
+tok PRINT = "print"
+tok IF = "if"
+tok ELSE = "else"
+tok ENDIF = "endif"
+tok COLON = ":"
+tok EQ = "="
+tok LPAREN = "("
+tok RPAREN = ")"
+tok COMMA = ","
+tok PLUS = "+"
+tok MINUS = "-"
+tok STAR = "*"
+tok SLASH = "/"
+tok GT = ">"
+tok LT = "<"
+tok GTE = ">="
+tok LTE = "<="
+tok EQEQ = "=="
+tok NEQ = "!="
+
+tok (
+        ID = (std::istream &s) {
+                std::string buf;
+                auto c = s.get();
+                if (std::isalpha(c) || c == '_') {
+                        buf.push_back(c);
+                        for (c = s.get(); std::isalnum(c) || c == '_'; c = s.get())
+                                buf.push_back(c);
+                        s.unget();
+                        char *buffer = new char[buf.size() + 1];
+                        memcpy(buffer, buf.data(), buf.size());
+                        buffer[buf.size()] = 0;
+                        return { Token::ID, buffer };
+                }
+                s.unget();
+                return Token::failed;
+        }
+
+        NUMBER = (std::istream &s) {
+                std::string buf;
+                auto c = s.get();
+                while (std::isdigit(c)) {
+                        buf.push_back(c);
+                        c = s.get();
+                }
+                if (c == '.') {
+                        buf.push_back(c);
+                        c = s.get();
+                        while (std::isdigit(c)) {
+                                buf.push_back(c);
+                                c = s.get();
+                        }
+                }
+                s.unget();
+                if (buf.empty() || buf.back() == '.') return Token::failed;
+                char *buffer = new char[buf.size() + 1];
+                memcpy(buffer, buf.data(), buf.size());
+                buffer[buf.size()] = 0;
+                return { Token::NUMBER, buffer };
+        }
+
+        STRING = (std::istream &s) {
+                std::string buf;
+                if (s.peek() != '"') return Token::failed;
+                s.get();
+                for (char c = s.get(); c != '"'; c = s.get()) {
+                        if (c == EOF) return Token::failed;
+                        buf.push_back(c);
+                }
+                char *buffer = new char[buf.size() + 1];
+                memcpy(buffer, buf.data(), buf.size());
+                buffer[buf.size()] = 0;
+                return { Token::STRING, buffer };
+        }
+)
+
+skip (
+        WHITESPACE = (std::istream &s) {
+                for (auto c = s.get(); std::isspace(c); c = s.get()) {}
+                s.unget();
+        }
+        COMMENT = (std::istream &s) {
+                if (s.peek() == '#') {
+                        std::string line;
+                        std::getline(s, line);
+                }
+        }
+)
+```
+```
+# Load stock data for a fictional tech company
+var stock_data = load_stock("TECH")
+
+# Calculate a 20-day Simple Moving Average
+var sma20 = sma(stock_data, 20)
+var last_sma20 = last(sma20)
+
+# Calculate a 50-day Simple Moving Average
+var sma50 = sma(stock_data, 50)
+var last_sma50 = last(sma50)
+
+print("Last 20-day SMA:")
+print(last_sma20)
+
+print("Last 50-day SMA:")
+print(last_sma50)
+
+# A simple trading signal based on a moving average crossover
+if last_sma20 > last_sma50:
+    print("Signal: BUY (Golden Cross)")
+else:
+    print("Signal: SELL (Death Cross)")
+endif
+
+# Calculate RSI
+var rsi14 = rsi(stock_data, 14)
+var last_rsi = last(rsi14)
+
+print("Last RSI (14-day):")
+print(last_rsi)
+
+if last_rsi > 70:
+    print("RSI Status: Overbought")
+else:
+    if last_rsi < 30:
+        print("RSI Status: Oversold")
+    else:
+        print("RSI Status: Neutral")
+    endif
+endif
+```
+```
+#include <iostream>
+#include <string>
+#include <vector>
+#include <map>
+#include <stdexcept>
+#include <numeric>
+#include <algorithm>
+#include <iomanip>
+
+// Assume the parser provides this structure.
+// For this example, we define a minimal version.
+struct ParseTree {
+    std::string type;
+    std::string data;
+    std::vector<ParseTree*> children;
+
+    ~ParseTree() {
+        for (ParseTree* child : children) {
+            delete child;
+        }
+    }
+};
+
+// All interpreter logic is contained within this single function call
+// using static helpers and nested structures.
+void interpret(ParseTree* root) {
+
+    // --- Helper Data Structures ---
+    enum ValueType { V_NIL, V_NUMBER, V_STRING, V_BOOL, V_SERIES };
+
+    struct Value {
+        ValueType type = V_NIL;
+        double number_val = 0.0;
+        std::string string_val = "";
+        bool bool_val = false;
+        std::vector<double> series_val;
+
+        bool is_truthy() const {
+            switch (type) {
+                case V_NIL:    return false;
+                case V_BOOL:   return bool_val;
+                case V_NUMBER: return number_val != 0.0;
+                case V_STRING: return !string_val.empty();
+                case V_SERIES: return !series_val.empty();
+                default:       return false;
+            }
+        }
+
+        void print() const {
+            switch (type) {
+                case V_NIL:    std::cout << "nil" << std::endl; break;
+                case V_BOOL:   std::cout << (bool_val ? "true" : "false") << std::endl; break;
+                case V_NUMBER: std::cout << std::fixed << std::setprecision(2) << number_val << std::endl; break;
+                case V_STRING: std::cout << string_val << std::endl; break;
+                case V_SERIES:
+                    std::cout << "[";
+                    for (size_t i = 0; i < series_val.size(); ++i) {
+                        std::cout << series_val[i] << (i == series_val.size() - 1 ? "" : ", ");
+                    }
+                    std::cout << "]" << std::endl;
+                    break;
+            }
+        }
+    };
+
+    using Environment = std::map<std::string, Value>;
+
+    // --- Forward declarations of helper functions ---
+    static void execute_program(ParseTree* node, Environment& env);
+    static Value eval_expression(ParseTree* node, Environment& env);
+
+    // --- Built-in Stock/Math Functions ---
+    static Value builtin_load_stock(const std::vector<Value>& args) {
+        if (args.empty() || args[0].type != V_STRING) {
+            throw std::runtime_error("load_stock requires a string argument (ticker symbol).");
+        }
+        // In a real scenario, you'd fetch data here.
+        // We'll return a hardcoded descending list of prices (newest first).
+        Value v;
+        v.type = V_SERIES;
+        v.series_val = {
+            155.2, 154.5, 155.1, 153.9, 152.3, 150.1, 149.8, 148.5, 149.2, 150.5,
+            151.8, 151.2, 150.3, 148.9, 147.6, 146.2, 145.1, 145.8, 144.3, 143.1,
+            143.5, 142.1, 140.2, 139.9, 140.8, 141.5, 142.3, 141.1, 140.5, 139.1,
+            138.7, 139.4, 140.1, 141.2, 140.9, 139.8, 138.5, 137.2, 136.9, 137.8,
+            138.2, 137.5, 136.1, 135.4, 134.8, 135.9, 136.7, 137.1, 138.3, 139.5,
+            140.2, 141.1, 142.5, 143.2, 142.8
+        };
+        return v;
+    }
+
+    static Value builtin_sma(const std::vector<Value>& args) {
+        if (args.size() != 2 || args[0].type != V_SERIES || args[1].type != V_NUMBER) {
+            throw std::runtime_error("sma requires a data series and a period (number).");
+        }
+        const auto& data = args[0].series_val;
+        int period = static_cast<int>(args[1].number_val);
+        if (period <= 0 || data.size() < (size_t)period) {
+             throw std::runtime_error("Invalid period for SMA calculation.");
+        }
+
+        Value result;
+        result.type = V_SERIES;
+        for (size_t i = 0; i <= data.size() - period; ++i) {
+            double sum = 0.0;
+            for (int j = 0; j < period; ++j) {
+                sum += data[i + j];
+            }
+            result.series_val.push_back(sum / period);
+        }
+        return result;
+    }
+
+    static Value builtin_rsi(const std::vector<Value>& args) {
+        if (args.size() != 2 || args[0].type != V_SERIES || args[1].type != V_NUMBER) {
+            throw std::runtime_error("rsi requires a data series and a period (number).");
+        }
+        const auto& data = args[0].series_val;
+        int period = static_cast<int>(args[1].number_val);
+        if (period <= 1 || data.size() < (size_t)period) {
+             throw std::runtime_error("Invalid period for RSI calculation.");
+        }
+
+        Value result;
+        result.type = V_SERIES;
+        // Data is newest to oldest, so we iterate backwards
+        std::vector<double> reversed_data = data;
+        std::reverse(reversed_data.begin(), reversed_data.end());
+
+        for (size_t i = period; i < reversed_data.size(); ++i) {
+            double gain = 0.0, loss = 0.0;
+            for (size_t j = i - period + 1; j <= i; ++j) {
+                double change = reversed_data[j] - reversed_data[j-1];
+                if (change > 0) gain += change;
+                else loss -= change;
+            }
+            double avg_gain = gain / period;
+            double avg_loss = loss / period;
+            if (avg_loss == 0) {
+                 result.series_val.push_back(100.0);
+            } else {
+                double rs = avg_gain / avg_loss;
+                result.series_val.push_back(100.0 - (100.0 / (1.0 + rs)));
+            }
+        }
+        std::reverse(result.series_val.begin(), result.series_val.end());
+        return result;
+    }
+
+    static Value builtin_last(const std::vector<Value>& args) {
+        if (args.size() != 1 || args[0].type != V_SERIES) {
+            throw std::runtime_error("last requires a data series.");
+        }
+        const auto& series = args[0].series_val;
+        if (series.empty()) {
+            throw std::runtime_error("Cannot get last element of an empty series.");
+        }
+        Value result;
+        result.type = V_NUMBER;
+        result.number_val = series[0]; // Newest data is at the front
+        return result;
+    }
+
+    // --- Core Evaluation Logic ---
+    static Value eval_function_call(ParseTree* node, Environment& env) {
+        std::string func_name = node->children[0]->data;
+        std::vector<Value> args;
+        if (node->children.size() > 1) { // has ARGS node
+            ParseTree* args_node = node->children[1];
+            for (ParseTree* arg_expr : args_node->children) {
+                args.push_back(eval_expression(arg_expr, env));
+            }
+        }
+
+        if (func_name == "load_stock") return builtin_load_stock(args);
+        if (func_name == "sma") return builtin_sma(args);
+        if (func_name == "rsi") return builtin_rsi(args);
+        if (func_name == "last") return builtin_last(args);
+
+        throw std::runtime_error("Undefined function '" + func_name + "'");
+    }
+
+    static Value eval_expression(ParseTree* node, Environment& env) {
+        if (node->type == "EXPRESSION" || node->type == "COMP_EXPR" || node->type == "ADD_EXPR" || node->type == "MUL_EXPR") {
+            Value left = eval_expression(node->children[0], env);
+            for (size_t i = 1; i < node->children.size(); i += 2) {
+                std::string op = node->children[i]->type;
+                Value right = eval_expression(node->children[i+1], env);
+                if (left.type != V_NUMBER || right.type != V_NUMBER) {
+                    throw std::runtime_error("Arithmetic/comparison operations only support numbers.");
+                }
+                Value result;
+                if (op == "PLUS") { result.type = V_NUMBER; result.number_val = left.number_val + right.number_val; }
+                else if (op == "MINUS") { result.type = V_NUMBER; result.number_val = left.number_val - right.number_val; }
+                else if (op == "STAR") { result.type = V_NUMBER; result.number_val = left.number_val * right.number_val; }
+                else if (op == "SLASH") { result.type = V_NUMBER; result.number_val = left.number_val / right.number_val; }
+                else if (op == "GT") { result.type = V_BOOL; result.bool_val = left.number_val > right.number_val; }
+                else if (op == "LT") { result.type = V_BOOL; result.bool_val = left.number_val < right.number_val; }
+                else if (op == "GTE") { result.type = V_BOOL; result.bool_val = left.number_val >= right.number_val; }
+                else if (op == "LTE") { result.type = V_BOOL; result.bool_val = left.number_val <= right.number_val; }
+                else if (op == "EQEQ") { result.type = V_BOOL; result.bool_val = left.number_val == right.number_val; }
+                else if (op == "NEQ") { result.type = V_BOOL; result.bool_val = left.number_val != right.number_val; }
+                left = result;
+            }
+            return left;
+        }
+        if (node->type == "ATOM") return eval_expression(node->children[0], env);
+        if (node->type == "NUMBER") { Value v; v.type = V_NUMBER; v.number_val = std::stod(node->data); return v; }
+        if (node->type == "STRING") { Value v; v.type = V_STRING; v.string_val = node->data; return v; }
+        if (node->type == "ID") {
+            if (env.find(node->data) == env.end()) throw std::runtime_error("Undefined variable '" + node->data + "'");
+            return env.at(node->data);
+        }
+        if (node->type == "FUNCTION_CALL") return eval_function_call(node, env);
+        
+        throw std::runtime_error("Unknown expression type: " + node->type);
+    }
+
+    static void execute_statement(ParseTree* node, Environment& env) {
+        std::string stmt_type = node->children[0]->type;
+        ParseTree* stmt_node = node->children[0];
+
+        if (stmt_type == "ASSIGNMENT") {
+            std::string var_name = stmt_node->children[1]->data;
+            Value val = eval_expression(stmt_node->children[3], env);
+            env[var_name] = val;
+        } else if (stmt_type == "PRINT_STMT") {
+            Value val = eval_expression(stmt_node->children[1], env);
+            val.print();
+        } else if (stmt_type == "IF_STMT") {
+            Value condition = eval_expression(stmt_node->children[1], env);
+            if (condition.is_truthy()) {
+                execute_program(stmt_node->children[3], env);
+            } else if (stmt_node->children.size() > 4) { // Has an ELSE clause
+                execute_program(stmt_node->children[5], env);
+            }
+        }
+    }
+
+    static void execute_program(ParseTree* node, Environment& env) {
+        for (ParseTree* stmt : node->children) {
+            execute_statement(stmt, env);
+        }
+    }
+
+    // --- Main entry point for interpretation ---
+    if (!root || root->type != "PROGRAM") {
+        std::cerr << "Invalid parse tree root." << std::endl;
+        return;
+    }
+
+    try {
+        Environment global_env;
+        execute_program(root, global_env);
+    } catch (const std::runtime_error& e) {
+        std::cerr << "Runtime Error: " << e.what() << std::endl;
+    }
+}
+```
+```
+Last 20-day SMA:
+148.48
+Last 50-day SMA:
+141.25
+Signal: BUY (Golden Cross)
+Last RSI (14-day):
+74.07
+RSI Status: Overbought
+```
