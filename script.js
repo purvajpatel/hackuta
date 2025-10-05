@@ -17,6 +17,9 @@ class AITerminal {
         this.clearConsoleBtn = document.getElementById('clear-console');
         this.pauseConsoleBtn = document.getElementById('pause-console');
         this.stopConsoleBtn = document.getElementById('stop-console');
+        this.codeEditor = document.getElementById('code-editor');
+        this.insertExampleBtn = document.getElementById('insert-example');
+        this.runCodeBtn = document.getElementById('run-code');
         
         // Output panel elements
         this.outputPanel = document.getElementById('output-panel');
@@ -86,6 +89,18 @@ class AITerminal {
             this.stopConsole();
         });
 
+        // Code editor helpers
+        this.insertExampleBtn.addEventListener('click', () => {
+            if (this.currentProgram?.config?.functions?.length) {
+                this.populateExampleFromFunctions(this.currentProgram.config.functions, this.currentProgram.config.domain || 'general');
+            } else {
+                this.insertExampleCode();
+            }
+        });
+        this.runCodeBtn.addEventListener('click', () => {
+            this.runExampleCode();
+        });
+
         this.consoleInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 this.handleConsoleInput();
@@ -113,6 +128,47 @@ class AITerminal {
         this.terminalContent.addEventListener('click', () => {
             this.commandInput.focus();
         });
+    }
+
+    insertExampleCode() {
+        const example = `print("hello")`;
+        this.codeEditor.value = example;
+    }
+
+    async runExampleCode() {
+        const code = (this.codeEditor?.value || '').trim();
+        if (!code) {
+            this.addConsoleLine('No code to run. Add example or type code.', 'error');
+            return;
+        }
+        try {
+            this.addConsoleLine('Sending code to runner...', 'info');
+            const res = await fetch('/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ example: code })
+            });
+            if (!res.ok) throw new Error(`Runner returned ${res.status}`);
+            const data = await res.json();
+            const output = data.output || '';
+            if (output) {
+                output.split('\n').forEach(line => {
+                    if (line.trim().length > 0) this.addConsoleLine(line, 'interpreter');
+                });
+            } else {
+                this.addConsoleLine('No stdout.', 'info');
+            }
+            if (data.error) {
+                data.error.split('\n').forEach(line => {
+                    if (line.trim().length > 0) this.addConsoleLine(line, 'error');
+                });
+            }
+            if (typeof data.returncode === 'number') {
+                this.addConsoleLine(`Process exited with code ${data.returncode}`, data.returncode === 0 ? 'info' : 'error');
+            }
+        } catch (err) {
+            this.addConsoleLine(`Error running code: ${err.message}`, 'error');
+        }
     }
 
     setupWelcomeFlow() {
@@ -229,36 +285,50 @@ class AITerminal {
         this.isProcessing = true;
         this.updateStatus('processing');
 
-        // Simulate Compiler AI processing
-        this.addResponseLine('Compiler AI: Analyzing domain requirements...', 'compiler', 500);
-        this.addResponseLine('Compiler AI: Designing language syntax and grammar...', 'compiler', 1500);
-        this.addResponseLine('Compiler AI: Generating domain-specific function libraries...', 'compiler', 2500);
-        
-        await this.delay(3000);
-        
-        // Simulate successful compilation
-        this.addResponseLine('Compiler AI: Domain-specific language generated successfully!', 'compiler', 0);
-        this.addResponseLine('Interpreter AI: Language runtime ready for execution', 'interpreter', 500);
-        
-        // Create a mock program object
-        this.currentProgram = {
-            name: 'program',
-            description: description,
-            config: this.generateMockConfig(description),
-            state: 'ready'
-        };
-
-        this.addResponseLine(`Domain-specific language "${this.currentProgram.name}" created and ready to use!`, 'info', 1000);
-        this.addResponseLine('Type "run ' + this.currentProgram.name + '" to execute code in this language', 'info', 1500);
-        
-        // Show available functions for the domain
-        if (this.currentProgram.config.functions && this.currentProgram.config.functions.length > 0) {
-            this.addResponseLine('Available functions:', 'info', 2000);
-            this.currentProgram.config.functions.forEach((func, index) => {
-                this.addResponseLine(`  • ${func}`, 'info', 2200 + (index * 200));
+        this.addResponseLine('Compiler AI: Sending request to generator...', 'compiler', 200);
+        try {
+            const res = await fetch('/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_input: description })
             });
+            if (!res.ok) throw new Error(`Generator returned ${res.status}`);
+            const data = await res.json();
+
+            this.currentProgram = {
+                name: 'program',
+                description,
+                config: { domain: 'generated' },
+                backend: data,
+                state: 'ready'
+            };
+
+            this.addResponseLine('Compiler AI: Language generated successfully!', 'compiler', 0);
+            this.addResponseLine('Interpreter AI: Runtime ready.', 'interpreter', 200);
+
+            // Prefill left editor with example code from backend (custom text area)
+            if (typeof data.example === 'string' && this.codeEditor) {
+                this.codeEditor.value = data.example;
+                this.switchTab('console');
+            }
+
+            // Stream initial output (if any) to right side
+            if (typeof data.example_output === 'string' && data.example_output.trim().length) {
+                data.example_output.split('\n').forEach(line => {
+                    if (line.trim().length > 0) this.addConsoleLine(line, 'interpreter');
+                });
+            }
+
+            // Populate docs from backend doc
+            if (typeof data.doc === 'string') {
+                this.populateDocsFromBackendDoc(data.doc, description);
+            } else {
+                this.populateDocsFromProgram(this.currentProgram);
+            }
+        } catch (err) {
+            this.addResponseLine(`Error generating language: ${this.escapeHtml(err.message)}`, 'error');
         }
-        
+
         this.isProcessing = false;
         this.updateStatus('ready');
     }
@@ -365,6 +435,92 @@ class AITerminal {
         }
 
         return config;
+    }
+
+    populateExampleFromFunctions(functions = [], domain = 'general') {
+        if (!this.codeEditor) return;
+        const header = `# Example generated from available functions\n# Domain: ${domain}\n`;
+        const calls = functions.map((sig, i) => {
+            // Convert a signature like foo(a, b) into a placeholder call
+            const name = sig.split('(')[0].trim();
+            const argsPart = (sig.match(/\((.*)\)/) || [,''])[1];
+            const args = argsPart
+                .split(',')
+                .map(s => s.trim())
+                .filter(Boolean)
+                .map((a, idx) => {
+                    // Provide lightweight placeholders
+                    if (a.toLowerCase().includes('stock') || a.toLowerCase().includes('ticker')) return `'AAPL'`;
+                    if (a.toLowerCase().includes('period')) return `14`;
+                    if (a.toLowerCase().includes('start')) return `'2024-01-01'`;
+                    if (a.toLowerCase().includes('end')) return `'2024-12-31'`;
+                    if (a.toLowerCase().includes('price') || a.toLowerCase().includes('data')) return `prices`;
+                    if (a.toLowerCase().includes('std')) return `2`;
+                    return `arg${idx+1}`;
+                })
+                .join(', ');
+            return `result_${i+1} = ${name}(${args})`;
+        }).join('\n');
+
+        const scaffold = [
+            header,
+            "# Prepare any required data",
+            "prices = [100, 102, 101, 105, 107, 110]",
+            "",
+            "# Call available functions",
+            calls,
+            "",
+            "# Print a sample result",
+            "print('First result:', result_1 if 'result_1' in globals() else 'n/a')"
+        ].join('\n');
+
+        this.codeEditor.value = scaffold;
+        // Ensure the user can see it
+        this.switchTab('console');
+    }
+
+    populateDocsFromProgram(program) {
+        try {
+            const docsRoot = document.querySelector('#docs-tab .docs-content');
+            if (!docsRoot || !program) return;
+            const { name, description, config } = program;
+            const functions = config?.functions || [];
+
+            const parts = [];
+            parts.push(`<div class=\"docs-section\"><h2>${this.escapeHtml(name)} Language</h2><p>${this.escapeHtml(description)}</p></div>`);
+            parts.push(`<div class=\"docs-section\"><h3>Available Functions</h3>${functions.length ? '<ul>' + functions.map(f => `<li><code>${this.escapeHtml(f)}</code></li>`).join('') + '</ul>' : '<p>No functions generated.</p>'}</div>`);
+            parts.push(`<div class=\"docs-section\"><h3>Quick Start</h3><ol><li>Open the Program Console tab.</li><li>Click \"Insert Example\" to load sample code.</li><li>Click \"Run\" to execute.</li></ol></div>`);
+
+            docsRoot.innerHTML = parts.join('');
+        } catch (_) {
+            // Best-effort update; ignore errors to avoid breaking UX
+        }
+    }
+
+    populateDocsFromBackendDoc(doc, description) {
+        try {
+            const docsRoot = document.querySelector('#docs-tab .docs-content');
+            if (!docsRoot) return;
+            const safeDoc = this.escapeHtml(doc).replace(/\n/g, '<br/>');
+            docsRoot.innerHTML = `
+                <div class="docs-section">
+                    <h2>Generated Language</h2>
+                    <p>${this.escapeHtml(description)}</p>
+                </div>
+                <div class="docs-section">
+                    <h3>Documentation</h3>
+                    <div>${safeDoc}</div>
+                </div>
+                <div class="docs-section">
+                    <h3>Quick Start</h3>
+                    <ol>
+                        <li>Open the Program Console tab.</li>
+                        <li>Edit the example code on the left.</li>
+                        <li>Click Run to execute and see output on the right.</li>
+                    </ol>
+                </div>
+            `;
+        } catch (_) {}
     }
 
     async runProgram(programName) {

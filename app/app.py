@@ -40,6 +40,7 @@ def run():
         f.write(example)
 
     output = subprocess.run(f"cd {CHISEL_DIR} && ./a.out {os.path.join(CHISEL_DIR, 'user_example.txt')}", capture_output=True, shell=True, text=True)
+    print(output.stdout)
     return jsonify({'output': output.stdout})
 
 

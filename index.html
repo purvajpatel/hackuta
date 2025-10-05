@@ -120,16 +120,33 @@
                         </div>
                     </div>
                     <div class="console-body">
-                        <div class="console-output" id="console-output">
-                            <div class="console-line">
-                                <span class="console-prompt">console@execution:~$</span>
-                                <span class="console-text">Program console ready. Execute a program to see output here.</span>
+                        <div class="console-split">
+                            <!-- Left: Example Code Editor -->
+                            <div class="code-pane">
+                                <div class="code-header">
+                                    <div class="code-title">📝 Example Code</div>
+                                    <div class="code-controls">
+                                        <button class="console-btn" id="insert-example">Insert Example</button>
+                                        <button class="console-btn" id="run-code">Run</button>
+                                    </div>
+                                </div>
+                                <textarea id="code-editor" class="code-editor" placeholder="Write or paste example code here..."></textarea>
                             </div>
-                        </div>
-                        <div class="console-input-area" id="console-input-area" style="display: none;">
-                            <div class="console-input-prompt">
-                                <span class="console-prompt">input@program:~$</span>
-                                <input type="text" id="console-input" class="console-input" placeholder="Enter your input...">
+
+                            <!-- Right: Output/Logs -->
+                            <div class="output-pane">
+                                <div class="console-output" id="console-output">
+                                    <div class="console-line">
+                                        <span class="console-prompt">console@execution:~$</span>
+                                        <span class="console-text">Program console ready. Execute a program to see output here.</span>
+                                    </div>
+                                </div>
+                                <div class="console-input-area" id="console-input-area" style="display: none;">
+                                    <div class="console-input-prompt">
+                                        <span class="console-prompt">input@program:~$</span>
+                                        <input type="text" id="console-input" class="console-input" placeholder="Enter your input...">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

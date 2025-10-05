@@ -362,6 +362,54 @@ body {
     overflow: hidden;
 }
 
+/* Split console layout */
+.console-split {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 12px 12px 12px 12px;
+    background: #0d1117;
+    overflow: hidden;
+}
+
+.code-pane, .output-pane {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #0d1117;
+}
+
+.code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: #21262d;
+    border-bottom: 1px solid #30363d;
+}
+
+.code-title {
+    color: #f0f6fc;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.code-editor {
+    flex: 1;
+    width: 100%;
+    background: #0d1117;
+    color: #f0f6fc;
+    border: none;
+    outline: none;
+    padding: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    resize: none;
+}
+
 .console-output {
     flex: 1;
     padding: 20px;
