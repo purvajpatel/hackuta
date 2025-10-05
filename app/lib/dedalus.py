@@ -3,20 +3,26 @@ import asyncio
 from dedalus_labs import AsyncDedalus, DedalusRunner
 from dotenv import load_dotenv
 from dedalus_labs.utils.streaming import stream_async
-from truncate_chisel import compress_hpp_file
 import subprocess
 
+from lib.truncate_chisel import compress_hpp_file
+
 load_dotenv()
+
+#has spec, inthpp, example, doc
+obj_ret = {}
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 print(PROJECT_ROOT)
 CHISEL_DIR = os.path.join(PROJECT_ROOT, 'chisel')
 
 def spec_tool(input: str) -> str:
-    print(f"Spec tool called with input: {input}")
     '''
     Takes in a spec and returns a parser for the spec
     '''
+    print(f"Spec tool called with input: {input}")
+
+    obj_ret['spec'] = input
     with open(os.path.join(os.path.dirname(__file__), 'spec.txt'), 'w') as f:
         f.write(input)
     
@@ -32,10 +38,12 @@ def spec_tool(input: str) -> str:
     return compressd_hpp
 
 def int_tool(input: str) -> str:
-    print(f"Int tool called with input: {input}")
     '''
     Takes in an int.hpp interpreter file and compiles it into an executable, linking it with the chisel.hpp framework
     '''
+    print(f"Int tool called with input: {input}")
+    obj_ret['inthpp'] = input
+
     with open(os.path.join(CHISEL_DIR, 'int.hpp'), 'w') as f:
         f.write(input)
     
@@ -48,6 +56,7 @@ def example_tool(input: str) -> str:
     '''
     Runs the example file and returns the output
     '''
+    obj_ret['example'] = input
     example_file = os.path.join(CHISEL_DIR, 'example.txt')
     with open(example_file, 'w') as f:
         f.write(input)
@@ -70,17 +79,18 @@ dedalus_stage_three = os.path.join(os.path.dirname(__file__), 'dedalus_stage_thr
 with open(dedalus_stage_three, 'r') as f:
     dedalus_stage_three = f.read()
 
-async def main():
+async def main(description: str):
     client = AsyncDedalus(api_key=os.getenv("DEDALUS_API_KEY"))
     runner = DedalusRunner(client)
 
     result = await runner.run(
-        input="Generate me a pythonic language with advanced stock market builtin functions for technical analysis." + dedalus_stage_one + dedalus_stage_two + dedalus_stage_three,
+        input= description + dedalus_stage_one + dedalus_stage_two + dedalus_stage_three,
         model="gemini/gemini-2.5-pro", 
         tools=[spec_tool, int_tool, example_tool]
     )
 
-    print(f"Result: {result.final_output}")
+    obj_ret['doc'] = result.final_output
+    return obj_ret
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main("Generate me a pythonic language with advanced stock market builtin functions for technical analysis."))

@@ -68,25 +68,18 @@ tok (
                         if(s.eof()) break;
                         c = s.get();
                 }
-                
-                if (s.eof()) {
-                    s.seekg(start_pos);
-                    return Token::failed;
-                }
-                
-                if (c == '.') {
-                        buf.push_back(c);
-                        if(s.eof()){
-                            s.seekg(start_pos);
-                            return Token::failed;
-                        }
-                        c = s.get();
-                        while (std::isdigit(c)){
-                                buf.push_back(c);
-                                if(s.eof()) break;
-                                c = s.get();
-                        }
+                if (s.peek() == '.') {
                         s.unget();
+                        buf.push_back(s.get());
+                        while (!s.eof()){
+                                c = s.get();
+                                if(std::isdigit(c)) {
+                                        buf.push_back(c);
+                                } else {
+                                        s.unget();
+                                        break;
+                                }
+                        }
                 } else {
                         s.seekg(start_pos);
                         return Token::failed;
@@ -112,12 +105,6 @@ tok (
                         c = s.get();
                 }
                 s.unget();
-
-                if (s.peek() == '.') {
-                    s.seekg(start_pos);
-                    return Token::failed;
-                }
-
                 if (buf.empty()) {
                         s.seekg(start_pos);
                         return Token::failed;
@@ -132,11 +119,10 @@ tok (
                 if (s.eof() || s.peek() != '"') return Token::failed;
                 s.get();
                 std::string buf;
-                while(s.peek() != '"'){
-                    if(s.eof()) return Token::failed;
-                    buf.push_back(s.get());
+                for (char c = s.get(); c != '"'; c = s.get()) {
+                        if (s.eof()) return Token::failed;
+                        buf.push_back(c);
                 }
-                s.get();
                 char *buffer = new char[buf.size() + 1];
                 memcpy(buffer, buf.data(), buf.size());
                 buffer[buf.size()] = 0;
