@@ -9,7 +9,7 @@ from lib.truncate_chisel import compress_hpp_file
 
 load_dotenv()
 
-#has spec, inthpp, example, doc
+#has spec, inthpp, example, doc, example_output
 obj_ret = {}
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -63,6 +63,7 @@ def example_tool(input: str) -> str:
 
     output = subprocess.run(f"cd {CHISEL_DIR} && ./a.out {example_file}", capture_output=True, shell=True, text=True)
     print(output.stdout)
+    obj_ret['example_output'] = output.stdout
 
     stdout, stderr = output.stdout, output.stderr
     return (stdout, stderr)
