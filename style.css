@@ -791,6 +791,21 @@ body {
     font-weight: 500;
 }
 
+/* Progress bar */
+.progress-bar-container {
+    height: 6px;
+    background: #21262d;
+    border-top: 1px solid #30363d;
+    border-bottom: 1px solid #30363d;
+}
+
+.progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #58a6ff, #00ff9c);
+    transition: width 0.2s ease;
+}
+
 .terminal-body {
     flex: 1;
     padding: 20px;
@@ -800,6 +815,14 @@ body {
 
 .terminal-content {
     margin-bottom: 20px;
+}
+
+/* TQDM-style inline progress line inside terminal */
+.tqdm-line {
+    font-family: 'JetBrains Mono', monospace;
+    color: #8b949e;
+    margin-left: 20px;
+    white-space: pre;
 }
 
 .terminal-line {

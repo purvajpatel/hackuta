@@ -54,7 +54,7 @@ tok (
                         buffer[buf.size()] = 0;
                         return { Token::ID, buffer };
                 }
-                s.seekg(start_pos);
+                s.unget();
                 return Token::failed;
         }
 
@@ -68,8 +68,8 @@ tok (
                         if(s.eof()) break;
                         c = s.get();
                 }
+                s.unget();
                 if (s.peek() == '.') {
-                        s.unget();
                         buf.push_back(s.get());
                         while (!s.eof()){
                                 c = s.get();

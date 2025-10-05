@@ -9,6 +9,8 @@ class AITerminal {
         this.commandInput = document.getElementById('command-input');
         this.compilerStatus = document.querySelector('.status-item:nth-child(2) .status-value');
         this.interpreterStatus = document.querySelector('.status-item:nth-child(3) .status-value');
+        this.progressContainer = document.getElementById('progress-container');
+        this.progressBar = document.getElementById('progress-bar');
         
         // Console elements
         this.consoleOutput = document.getElementById('console-output');
@@ -17,6 +19,7 @@ class AITerminal {
         this.clearConsoleBtn = document.getElementById('clear-console');
         this.pauseConsoleBtn = document.getElementById('pause-console');
         this.stopConsoleBtn = document.getElementById('stop-console');
+        this.downloadInterpreterBtn = document.getElementById('download-interpreter');
         this.codeEditor = document.getElementById('code-editor');
         this.insertExampleBtn = document.getElementById('insert-example');
         this.runCodeBtn = document.getElementById('run-code');
@@ -89,6 +92,10 @@ class AITerminal {
             this.stopConsole();
         });
 
+        this.downloadInterpreterBtn.addEventListener('click', () => {
+            this.downloadInterpreter();
+        });
+
         // Code editor helpers
         this.insertExampleBtn.addEventListener('click', () => {
             if (this.currentProgram?.config?.functions?.length) {
@@ -128,6 +135,29 @@ class AITerminal {
         this.terminalContent.addEventListener('click', () => {
             this.commandInput.focus();
         });
+    }
+
+    downloadInterpreter() {
+        try {
+            const backend = this.currentProgram?.backend;
+            // Try to infer interpreter content from backend fields used in dedalus: likely 'inthpp'
+            const content = backend?.inthpp || backend?.int || backend?.interpreter || '';
+            if (!content) {
+                this.addConsoleLine('No interpreter available. Generate a program first.', 'error');
+                return;
+            }
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'int.hpp';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            this.addConsoleLine('Failed to download interpreter.', 'error');
+        }
     }
 
     insertExampleCode() {
@@ -285,7 +315,9 @@ class AITerminal {
         this.isProcessing = true;
         this.updateStatus('processing');
 
-        this.addResponseLine('Compiler AI: Sending request to generator...', 'compiler', 200);
+        this.addResponseLine('Parser: Sending request to generator...', 'compiler', 200);
+        this.startProgress();
+        this.startInlineTqdm();
         try {
             const res = await fetch('/generate', {
                 method: 'POST',
@@ -303,8 +335,8 @@ class AITerminal {
                 state: 'ready'
             };
 
-            this.addResponseLine('Compiler AI: Language generated successfully!', 'compiler', 0);
-            this.addResponseLine('Interpreter AI: Runtime ready.', 'interpreter', 200);
+            this.addResponseLine('Parser: Language generated successfully!', 'compiler', 0);
+            this.addResponseLine('Interpreter: Runtime ready.', 'interpreter', 200);
 
             // Prefill left editor with example code from backend (custom text area)
             if (typeof data.example === 'string' && this.codeEditor) {
@@ -331,6 +363,8 @@ class AITerminal {
 
         this.isProcessing = false;
         this.updateStatus('ready');
+        this.finishProgress();
+        this.finishInlineTqdm();
     }
 
     generateMockConfig(description) {
@@ -646,15 +680,88 @@ class AITerminal {
 
     updateStatus(status) {
         if (status === 'processing') {
-            this.compilerStatus.textContent = 'PROCESSING';
+            this.compilerStatus.textContent = 'PARSER';
             this.compilerStatus.className = 'status-value processing';
-            this.interpreterStatus.textContent = 'PROCESSING';
+            this.interpreterStatus.textContent = 'INTERPRETER';
             this.interpreterStatus.className = 'status-value processing';
         } else {
-            this.compilerStatus.textContent = 'READY';
+            this.compilerStatus.textContent = 'PARSER';
             this.compilerStatus.className = 'status-value ready';
-            this.interpreterStatus.textContent = 'READY';
+            this.interpreterStatus.textContent = 'INTERPRETER';
             this.interpreterStatus.className = 'status-value ready';
+        }
+    }
+
+    startProgress() {
+        if (!this.progressContainer || !this.progressBar) return;
+        this.progressContainer.style.display = 'block';
+        this.progressBar.style.width = '0%';
+        const start = Date.now();
+        const approxMs = 60000; // ~1 minute max, but will finish early if response returns
+        clearInterval(this.progressTimer);
+        this.progressTimer = setInterval(() => {
+            const elapsed = Date.now() - start;
+            const pct = Math.min(95, Math.floor((elapsed / approxMs) * 95));
+            this.progressBar.style.width = pct + '%';
+        }, 200);
+    }
+
+    finishProgress() {
+        if (!this.progressContainer || !this.progressBar) return;
+        clearInterval(this.progressTimer);
+        this.progressBar.style.width = '100%';
+        setTimeout(() => {
+            this.progressContainer.style.display = 'none';
+            this.progressBar.style.width = '0%';
+        }, 600);
+    }
+
+    // Inline tqdm-like progress under the input line
+    startInlineTqdm() {
+        // Create or reuse a single tqdm line under the terminal input
+        if (this.tqdmTimer) clearInterval(this.tqdmTimer);
+        // Insert line element
+        if (!this.tqdmEl) {
+            this.tqdmEl = document.createElement('div');
+            this.tqdmEl.className = 'terminal-line tqdm-line';
+            this.terminalContent.appendChild(this.tqdmEl);
+        }
+        const start = Date.now();
+        const approxMs = 60000; // 60s visual budget
+        const barWidth = 24; // characters in progress bar
+        this.tqdmTimer = setInterval(() => {
+            const elapsed = Date.now() - start;
+            const pct = Math.min(0.95, elapsed / approxMs);
+            const filled = Math.max(1, Math.floor(pct * barWidth));
+            const bar = '[' + '='.repeat(filled - 1) + '>' + '.'.repeat(Math.max(0, barWidth - filled)) + ']';
+            const pctText = String(Math.floor(pct * 100)).padStart(2, ' ');
+            const esc = (ms) => {
+                const s = Math.floor(ms / 1000);
+                const m = Math.floor(s / 60);
+                const r = s % 60;
+                return `${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`;
+            };
+            const elapsedText = esc(elapsed);
+            const totalText = esc(approxMs);
+            this.tqdmEl.textContent = `${bar} ${pctText}% ${elapsedText}/${totalText}`;
+            this.scrollToBottom();
+        }, 200);
+    }
+
+    finishInlineTqdm() {
+        if (this.tqdmTimer) {
+            clearInterval(this.tqdmTimer);
+            this.tqdmTimer = null;
+        }
+        if (this.tqdmEl) {
+            // Fill to 100% briefly then remove
+            this.tqdmEl.textContent = `[${'='.repeat(23)}>] 100% 01:00/01:00`;
+            setTimeout(() => {
+                if (this.tqdmEl && this.tqdmEl.parentNode) {
+                    this.tqdmEl.parentNode.removeChild(this.tqdmEl);
+                    this.tqdmEl = null;
+                }
+            }, 600);
         }
     }
 

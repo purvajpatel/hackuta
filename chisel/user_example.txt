@@ -1,5 +1,5 @@
 # Example generated from available functions
-# Domain: general
+# Domain: stock-market
 
 # Prepare any required data
 prices = [100, 102, 101, 105, 107, 110]
