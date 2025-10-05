@@ -1,12 +1,5 @@
-main.cpp
 chisel.hpp
-a.out
-template.chisel
-test.file
-t.chisel
-t.chisel.bak
-example
 int.hpp
-t.spec
-t.chisel.bak*
-test*.file
+example.txt
+user_example.txt
+a.out
