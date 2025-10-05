@@ -1,6 +1,8 @@
 import os
 from flask import Flask, render_template, request, jsonify, send_file
 from dotenv import load_dotenv
+from io import BytesIO
+from zipfile import ZipFile, ZIP_DEFLATED
 import asyncio
 import subprocess
 
@@ -43,8 +45,26 @@ def run():
     print(output.stdout)
     return jsonify({'output': output.stdout})
 
+@app.route('/download', methods=['POST'])
+def download():
+    data = request.json or {}
+    filenames = ['int.hpp', 'chisel.hpp', 'main.cpp']
 
+    memory_file = BytesIO()
+    with ZipFile(memory_file, mode='w', compression=ZIP_DEFLATED) as zf:
+        for name in filenames:
+            path = os.path.join(CHISEL_DIR, name)  # adjust base dir as needed
+            if os.path.isfile(path):
+                # arcname controls the file name inside the zip
+                zf.write(path, arcname=name)
 
+    memory_file.seek(0)
+    return send_file(
+        memory_file,
+        mimetype='application/zip',
+        as_attachment=True,
+        download_name='forge.zip'
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)
