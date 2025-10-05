@@ -1,0 +1,95 @@
+```
+program = statement*;
+statement = assignment | function_call;
+assignment = ID EQ expr;
+expr = function_call | ID | NUMBER | STRING;
+function_call = ID LPAREN arg_list? RPAREN;
+arg_list = expr (COMMA expr)*;
+
+tok EQ = "="
+tok LPAREN = "("
+tok RPAREN = ")"
+tok COMMA = ","
+
+tok (
+        ID = (std::istream &s) {
+                if (s.eof()) return Token::failed;
+                std::string buf;
+                auto c = s.get();
+                if (std::isalpha(c) || c == '_') {
+                        buf.push_back(c);
+                        for (c = s.get(); !s.eof() && (std::isalnum(c) || c == '_'); c = s.get())
+                                buf.push_back(c);
+                        if (!s.eof()) s.unget();
+                        char *buffer = new char[buf.size() + 1];
+                        memcpy(buffer, buf.data(), buf.size());
+                        buffer[buf.size()] = 0;
+                        return { Token::ID, buffer };
+                }
+                s.unget();
+                return Token::failed;
+        }
+
+        NUMBER = (std::istream &s) {
+                if (s.eof()) return Token::failed;
+                std::string buf;
+                char c = s.get();
+                while (std::isdigit(c)) {
+                        buf.push_back(c);
+                        c = s.get();
+                }
+                if (c == '.') {
+                        buf.push_back(c);
+                        c = s.get();
+                        while (std::isdigit(c)) {
+                                buf.push_back(c);
+                                c = s.get();
+                        }
+                }
+                if (!s.eof()) s.unget();
+                if (buf.empty() || buf == ".")
+                        return Token::failed;
+                char *buffer = new char[buf.size() + 1];
+                memcpy(buffer, buf.data(), buf.size());
+                buffer[buf.size()] = 0;
+                return { Token::NUMBER, buffer };
+        }
+
+        STRING = (std::istream &s) {
+                if (s.eof()) return Token::failed;
+                std::string buf;
+                char c = s.get();
+                if (c != '"') {
+                        s.unget();
+                        return Token::failed;
+                }
+                for (c = s.get(); !s.eof() && c != '"'; c = s.get()) {
+                        if (c == '\\') {
+                                c = s.get();
+                                if (s.eof()) break;
+                        }
+                        buf.push_back(c);
+                }
+                char *buffer = new char[buf.size() + 1];
+                memcpy(buffer, buf.data(), buf.size());
+                buffer[buf.size()] = 0;
+                return { Token::STRING, buffer };
+        }
+)
+
+skip (
+        WHITESPACE = (std::istream &s) {
+                for (auto c = s.get(); !s.eof() && std::isspace(c); c = s.get()) {}
+                if (!s.eof()) s.unget();
+        }
+)
+```
+```
+spy_data = get_data("SPY", "1d")
+rsi_14 = rsi(spy_data, 14)
+sma_200 = sma(spy_data, 200)
+
+bands = bbands(spy_data, 20, 2.0)
+
+plot(spy_data, sma_200, bands)
+```
