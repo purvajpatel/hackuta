@@ -701,11 +701,12 @@ class AITerminal {
         this.progressContainer.style.display = 'block';
         this.progressBar.style.width = '0%';
         const start = Date.now();
-        const approxMs = 60000; // ~1 minute max, but will finish early if response returns
+        const approxMs = 150000; // ~2:30 visual budget, finish early when response returns
         clearInterval(this.progressTimer);
         this.progressTimer = setInterval(() => {
             const elapsed = Date.now() - start;
-            const pct = Math.min(95, Math.floor((elapsed / approxMs) * 95));
+            // Cap at 99% until we actually finish
+            const pct = Math.min(99, Math.floor((elapsed / approxMs) * 99));
             this.progressBar.style.width = pct + '%';
         }, 200);
     }
@@ -731,11 +732,12 @@ class AITerminal {
             this.terminalContent.appendChild(this.tqdmEl);
         }
         const start = Date.now();
-        const approxMs = 60000; // 60s visual budget
+        const approxMs = 150000; // 2:30 visual budget
         const barWidth = 24; // characters in progress bar
         this.tqdmTimer = setInterval(() => {
             const elapsed = Date.now() - start;
-            const pct = Math.min(0.95, elapsed / approxMs);
+            // Cap at 99% until finish
+            const pct = Math.min(0.99, elapsed / approxMs);
             const filled = Math.max(1, Math.floor(pct * barWidth));
             const bar = '[' + '='.repeat(filled - 1) + '>' + '.'.repeat(Math.max(0, barWidth - filled)) + ']';
             const pctText = String(Math.floor(pct * 100)).padStart(2, ' ');

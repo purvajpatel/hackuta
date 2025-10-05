@@ -1,16 +1,4 @@
-# Example generated from available functions
-# Domain: stock-market
+golden_cross = sma("AAPL", 50) > sma("AAPL", 200)
 
-# Prepare any required data
-prices = [100, 102, 101, 105, 107, 110]
 
-# Call available functions
-result_1 = calculate_moving_average('AAPL', 14)
-result_2 = detect_support_resistance(prices)
-result_3 = analyze_volume_patterns('AAPL')
-result_4 = backtest_strategy(arg1, '2024-01-01', '2024-12-31')
-result_5 = calculate_rsi(prices, 14)
-result_6 = get_bollinger_bands(prices, 14, 2)
-
-# Print a sample result
-print('First result:', result_1 if 'result_1' in globals() else 'n/a')
+print("hello" + " w" + 5 + 10)

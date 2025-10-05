@@ -3,7 +3,8 @@ STATEMENT = ASSIGNMENT | EXPRESSION;
 ASSIGNMENT = ID EQ EXPRESSION;
 EXPRESSION = OR_EXPR;
 OR_EXPR = AND_EXPR (OR AND_EXPR)*;
-AND_EXPR = ARITH_EXPR (AND ARITH_EXPR)*;
+AND_EXPR = COMP_EXPR (AND COMP_EXPR)*;
+COMP_EXPR = ARITH_EXPR ((EQEQ | NEQ | LT | GT | LTE | GTE) ARITH_EXPR)?;
 ARITH_EXPR = TERM ((PLUS | MINUS) TERM)*;
 TERM = FACTOR ((MUL | DIV) FACTOR)*;
 FACTOR = FUNCTION_CALL | ID | FLOAT | INT | STRING | LPAREN EXPRESSION RPAREN;
@@ -13,6 +14,12 @@ ARGS = EXPRESSION (COMMA EXPRESSION)*;
 tok EQ = "="
 tok OR = "or"
 tok AND = "and"
+tok EQEQ = "=="
+tok NEQ = "!="
+tok LT = "<"
+tok GT = ">"
+tok LTE = "<="
+tok GTE = ">="
 tok PLUS = "+"
 tok MINUS = "-"
 tok MUL = "*"
@@ -22,116 +29,111 @@ tok RPAREN = ")"
 tok COMMA = ","
 
 tok (
-    ID = (std::istream &s) {
-        if (s.eof()) return Token::failed;
-        auto start_pos = s.tellg();
-        std::string buf;
-        auto c = s.get();
-        if (std::isalpha(c) || c == '_') {
-            buf.push_back(c);
-            while (!s.eof()) {
-                c = s.get();
-                if (std::isalnum(c) || c == '_') {
-                    buf.push_back(c);
-                } else {
-                    s.unget();
-                    break;
+        ID = (std::istream &s) {
+                if (s.eof()) return Token::failed;
+                auto start_pos = s.tellg();
+                std::string buf;
+                auto c = s.get();
+                if (std::isalpha(c) || c == '_') {
+                        buf.push_back(c);
+                        while (!s.eof()) {
+                                c = s.get();
+                                if (std::isalnum(c) || c == '_') {
+                                        buf.push_back(c);
+                                } else {
+                                        s.unget();
+                                        break;
+                                }
+                        }
+                        if (buf == "or" || buf == "and") {
+                                s.seekg(start_pos);
+                                return Token::failed;
+                        }
+                        char *buffer = new char[buf.size() + 1];
+                        memcpy(buffer, buf.data(), buf.size());
+                        buffer[buf.size()] = 0;
+                        return { Token::ID, buffer };
                 }
-            }
-            if (buf == "or" || buf == "and") {
-                s.seekg(start_pos);
+                s.unget();
                 return Token::failed;
-            }
-            char *buffer = new char[buf.size() + 1];
-            memcpy(buffer, buf.data(), buf.size());
-            buffer[buf.size()] = 0;
-            return { Token::ID, buffer };
         }
-        s.seekg(start_pos);
-        return Token::failed;
-    }
 
-    FLOAT = (std::istream &s) {
-        if (s.eof()) return Token::failed;
-        auto start_pos = s.tellg();
-        std::string buf;
-        char c = s.get();
-        while(std::isdigit(c)) {
-            buf.push_back(c);
-            if(s.eof()) break;
-            c = s.get();
-        }
-        s.unget();
-        if (s.peek() == '.') {
-            buf.push_back(s.get());
-            while (!s.eof()){
-                c = s.get();
-                if(std::isdigit(c)) {
-                    buf.push_back(c);
-                } else {
-                    s.unget();
-                    break;
+        FLOAT = (std::istream &s) {
+                if (s.eof()) return Token::failed;
+                auto start_pos = s.tellg();
+                std::string buf;
+                char c = s.get();
+                while(std::isdigit(c)) {
+                        buf.push_back(c);
+                        if(s.eof()) break;
+                        c = s.get();
                 }
-            }
-        } else {
-            s.seekg(start_pos);
-            return Token::failed;
+                s.unget();
+                if (s.peek() == '.') {
+                        buf.push_back(s.get());
+                        while (!s.eof()){
+                                c = s.get();
+                                if(std::isdigit(c)) {
+                                        buf.push_back(c);
+                                } else {
+                                        s.unget();
+                                        break;
+                                }
+                        }
+                } else {
+                        s.seekg(start_pos);
+                        return Token::failed;
+                }
+                if (buf.empty() || buf.back() == '.') {
+                        s.seekg(start_pos);
+                        return Token::failed;
+                }
+                char *buffer = new char[buf.size() + 1];
+                memcpy(buffer, buf.data(), buf.size());
+                buffer[buf.size()] = 0;
+                return { Token::FLOAT, buffer };
         }
-        if (buf.empty() || buf.back() == '.') {
-            s.seekg(start_pos);
-            return Token::failed;
-        }
-        char *buffer = new char[buf.size() + 1];
-        memcpy(buffer, buf.data(), buf.size());
-        buffer[buf.size()] = 0;
-        return { Token::FLOAT, buffer };
-    }
 
-    INT = (std::istream &s) {
-        if (s.eof()) return Token::failed;
-        auto start_pos = s.tellg();
-        std::string buf;
-        char c = s.get();
-        while (std::isdigit(c)) {
-            buf.push_back(c);
-            if (s.eof()) break;
-            c = s.get();
+        INT = (std::istream &s) {
+                if (s.eof()) return Token::failed;
+                auto start_pos = s.tellg();
+                std::string buf;
+                char c = s.get();
+                while (std::isdigit(c)) {
+                        buf.push_back(c);
+                        if (s.eof()) break;
+                        c = s.get();
+                }
+                s.unget();
+                if (buf.empty()) {
+                        s.seekg(start_pos);
+                        return Token::failed;
+                }
+                char *buffer = new char[buf.size() + 1];
+                memcpy(buffer, buf.data(), buf.size());
+                buffer[buf.size()] = 0;
+                return { Token::INT, buffer };
         }
-        s.unget();
-        if (!s.eof() && s.peek() == '.') {
-           s.seekg(start_pos);
-           return Token::failed;
-        }
-        if (buf.empty()) {
-            s.seekg(start_pos);
-            return Token::failed;
-        }
-        char *buffer = new char[buf.size() + 1];
-        memcpy(buffer, buf.data(), buf.size());
-        buffer[buf.size()] = 0;
-        return { Token::INT, buffer };
-    }
 
-    STRING = (std::istream &s) {
-        if (s.eof() || s.peek() != '"') return Token::failed;
-        s.get();
-        std::string buf;
-        while(!s.eof() && s.peek() != '"') {
-             buf.push_back(s.get());
+        STRING = (std::istream &s) {
+                if (s.eof() || s.peek() != '"') return Token::failed;
+                s.get();
+                std::string buf;
+                for (char c = s.get(); c != '"'; c = s.get()) {
+                        if (s.eof()) return Token::failed;
+                        buf.push_back(c);
+                }
+                char *buffer = new char[buf.size() + 1];
+                memcpy(buffer, buf.data(), buf.size());
+                buffer[buf.size()] = 0;
+                return { Token::STRING, buffer };
         }
-        if(s.eof()) return Token::failed;
-        s.get();
-        char *buffer = new char[buf.size() + 1];
-        memcpy(buffer, buf.data(), buf.size());
-        buffer[buf.size()] = 0;
-        return { Token::STRING, buffer };
-    }
 )
 
 skip (
-    WHITESPACE = (std::istream &s) {
-        while (!s.eof() && std::isspace(s.peek())) {
-            s.get();
+        WHITESPACE = (std::istream &s) {
+                while (!s.eof() && std::isspace(s.peek())) {
+                        s.get();
+                }
         }
-    }
 )
