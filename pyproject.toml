@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12.11"
 dependencies = [
+    "dedalus-labs>=0.1.0a9",
     "dotenv>=0.9.9",
     "flask>=3.1.2",
     "openai>=2.1.0",

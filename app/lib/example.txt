@@ -1,8 +1,20 @@
-golden_cross = sma("AAPL", 50) > sma("AAPL", 200)
-oversold = rsi("MSFT", 14) < 30
-buy_signal = golden_cross and oversold
+# Calculate the 50-day simple moving average for NVDA
+nvda_sma_50 = sma("NVDA", 50)
 
-portfolio_value = price("GOOG") * 100 + price("TSLA") * 50
-stop_loss = price("NVDA") < 450.50
+# Calculate the 14-day relative strength index for NVDA
+nvda_rsi_14 = rsi("NVDA", 14)
 
-complex_check = (macd("SPY") > 0 and rsi("SPY", 14) < 70) or price("SPY") > 500.00
+# Determine a buy signal based on technical indicators
+# A buy signal is true if the current price is above the 50-day SMA AND the RSI is below 30 (oversold)
+buy_signal = get_price("NVDA") > nvda_sma_50 and nvda_rsi_14 < 30
+
+# Determine a sell signal
+# A sell signal is true if the current price is below the 50-day SMA OR the RSI is above 70 (overbought)
+sell_signal = get_price("NVDA") < nvda_sma_50 or nvda_rsi_14 > 70
+
+# Example of a more complex chained operation with left-to-right precedence
+complex_check = bollinger_bands("TSLA")[0] < get_price("TSLA") and get_price("TSLA") > sma("TSLA", 20) or rsi("TSLA", 14) > 75
+
+# Print the signals to the console
+print("NVDA Buy Signal:", buy_signal)
+print("NVDA Sell Signal:", sell_signal)

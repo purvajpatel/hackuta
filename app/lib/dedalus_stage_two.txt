@@ -1,0 +1,429 @@
+STAGE_TWO: PREREQ: SUCCESSFUL STAGE_ONE CALL
+
+After running the spec_tool, you are now tasked with writing out an INTERPRETER. 
+You got back function definitions (NOT implementations) from chisel.hpp, which is our framework for translating from your defined spec to a ParseTree
+NOW, you need to write an interpreter for actually running your spec.
+
+
+Generating the interpreter
+Requirements:
+- The entry point of the interpreter should be a global function called **interpreter** and it MUST be called interpreter that takes exactly 1 node parameter and interprets the tree accordingly. 
+- ANY builtin functions/symbols you incorporate (i.e. SMA for a stock focused language) MUST be defined in your environment
+- The entry point of the function must be a NODE **pointer** as per the spec, do not interchange between pointer and reference for the entry point, ONLY use a pointer.
+
+Constraints:
+- DO NOT include ANY natural language, just the code. 
+- NO MAIN FUNCTION, entrypoint is defined with your interpreter function, your main function WILL cause an error 
+
+Use your tools. The int_tool generates a FINAL executable binary when you pass in your int.hpp code.
+
+The following is an example of a generated int.hpp file that interprets the following user prompt:
+
+USER: Generate me a pythonic language with advanced stock market builtin functions for technical analysis.
+ASSISTANT OUTPUT:
+```
+#include <cmath>
+#include <functional>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
+#include <variant>
+#include <vector>
+
+#include "chisel.hpp"
+
+// Forward declaration of the main interpreter function
+struct Value;
+Value interpreter(chisel::Parser::Node *node);
+
+// Global environment to store variables and functions
+std::unordered_map<std::string, Value> environment;
+
+// Represents a value in the language. It can be a number, string, boolean, etc.
+using BuiltinFunc = std::function<Value(const std::vector<Value> &)>;
+
+struct Value {
+  std::variant<std::monostate, // null
+               bool, long long, double, std::string, BuiltinFunc>
+      data;
+
+  // Constructors
+  Value() : data(std::monostate{}) {}
+  Value(bool v) : data(v) {}
+  Value(int v) : data(static_cast<long long>(v)) {}
+  Value(long long v) : data(v) {}
+  Value(double v) : data(v) {}
+  Value(const char *v) : data(std::string(v)) {}
+  Value(const std::string &v) : data(v) {}
+  Value(BuiltinFunc v) : data(v) {}
+
+  // Type checking methods
+  bool is_null() const { return std::holds_alternative<std::monostate>(data); }
+  bool is_bool() const { return std::holds_alternative<bool>(data); }
+  bool is_int() const { return std::holds_alternative<long long>(data); }
+  bool is_double() const { return std::holds_alternative<double>(data); }
+  bool is_number() const { return is_int() || is_double(); }
+  bool is_string() const { return std::holds_alternative<std::string>(data); }
+  bool is_function() const { return std::holds_alternative<BuiltinFunc>(data); }
+
+  // Type conversion methods
+  double as_double() const {
+    if (is_double())
+      return std::get<double>(data);
+    if (is_int())
+      return static_cast<double>(std::get<long long>(data));
+    throw std::runtime_error("Type error: expected a number.");
+  }
+
+  long long as_int() const {
+    if (is_int())
+      return std::get<long long>(data);
+    if (is_double())
+      return static_cast<long long>(std::get<double>(data));
+    throw std::runtime_error("Type error: expected a number.");
+  }
+
+  std::string as_string() const {
+    if (is_string())
+      return std::get<std::string>(data);
+    throw std::runtime_error("Type error: expected a string.");
+  }
+
+  // Check if the value is "truthy"
+  bool is_truthy() const {
+    if (is_bool())
+      return std::get<bool>(data);
+    if (is_int())
+      return std::get<long long>(data) != 0;
+    if (is_double())
+      return std::get<double>(data) != 0.0;
+    if (is_string())
+      return !std::get<std::string>(data).empty();
+    if (is_null() || is_function())
+      return false;
+    return true;
+  }
+
+  // Print the value to a stream
+  void print(std::ostream &os) const {
+    if (is_null()) {
+      os << "null";
+    } else if (is_bool()) {
+      os << (std::get<bool>(data) ? "true" : "false");
+    } else if (is_int()) {
+      os << std::get<long long>(data);
+    } else if (is_double()) {
+      os << std::fixed << std::setprecision(2) << std::get<double>(data);
+    } else if (is_string()) {
+      os << std::get<std::string>(data);
+    } else if (is_function()) {
+      os << "<function>";
+    }
+  }
+};
+
+// --- Operator Overloads for Value struct ---
+
+Value operator+(const Value &a, const Value &b) {
+  if (a.is_string() || b.is_string()) {
+    std::stringstream ss;
+    a.print(ss);
+    b.print(ss);
+    return Value(ss.str());
+  }
+  if (a.is_double() || b.is_double()) {
+    return Value(a.as_double() + b.as_double());
+  }
+  return Value(a.as_int() + b.as_int());
+}
+
+Value operator-(const Value &a, const Value &b) {
+  if (a.is_double() || b.is_double()) {
+    return Value(a.as_double() - b.as_double());
+  }
+  return Value(a.as_int() - b.as_int());
+}
+
+Value operator*(const Value &a, const Value &b) {
+  if (a.is_double() || b.is_double()) {
+    return Value(a.as_double() * b.as_double());
+  }
+  return Value(a.as_int() * b.as_int());
+}
+
+Value operator/(const Value &a, const Value &b) {
+  if (b.as_double() == 0.0) {
+    throw std::runtime_error("Division by zero.");
+  }
+  return Value(a.as_double() / b.as_double());
+}
+
+Value operator==(const Value &a, const Value &b) {
+  if (a.is_null() && b.is_null())
+    return Value(true);
+  if (a.is_null() || b.is_null())
+    return Value(false);
+  if (a.is_bool() && b.is_bool())
+    return Value(std::get<bool>(a.data) == std::get<bool>(b.data));
+  if (a.is_string() && b.is_string())
+    return Value(a.as_string() == b.as_string());
+  if (a.is_number() && b.is_number()) {
+    return Value(std::abs(a.as_double() - b.as_double()) < 1e-9);
+  }
+  return Value(false);
+}
+
+Value operator!=(const Value &a, const Value &b) {
+  return Value(!std::get<bool>((a == b).data));
+}
+
+Value operator<(const Value &a, const Value &b) {
+  if (a.is_string() && b.is_string())
+    return Value(a.as_string() < b.as_string());
+  if (a.is_number() && b.is_number())
+    return Value(a.as_double() < b.as_double());
+  throw std::runtime_error("Type error: cannot compare types with '<'.");
+}
+
+Value operator>(const Value &a, const Value &b) { return b < a; }
+
+Value operator<=(const Value &a, const Value &b) {
+  return Value(!(a > b).is_truthy());
+}
+
+Value operator>=(const Value &a, const Value &b) {
+  return Value(!(a < b).is_truthy());
+}
+
+// --- Built-in Functions ---
+
+void setup_environment() {
+  environment.clear();
+
+  environment["print"] =
+      Value{BuiltinFunc([](const std::vector<Value> &args) -> Value {
+        for (size_t i = 0; i < args.size(); ++i) {
+          args[i].print(std::cout);
+          if (i < args.size() - 1)
+            std::cout << " ";
+        }
+        std::cout << std::endl;
+        return Value(); // print returns null
+      })};
+
+  environment["price"] =
+      Value{BuiltinFunc([](const std::vector<Value> &args) -> Value {
+        if (args.size() != 1 || !args[0].is_string()) {
+          throw std::runtime_error(
+              "price() expects one string argument (ticker symbol).");
+        }
+        // Return a deterministic dummy value
+        return Value(100.0 + args[0].as_string().length() * 5.3);
+      })};
+
+  environment["sma"] =
+      Value{BuiltinFunc([](const std::vector<Value> &args) -> Value {
+        if (args.size() != 2 || !args[0].is_string() || !args[1].is_int()) {
+          throw std::runtime_error(
+              "sma() expects a string (symbol) and an integer (period).");
+        }
+        return Value(100.0 + args[0].as_string().length() * 5.3 -
+                     args[1].as_int() / 10.0);
+      })};
+
+  environment["rsi"] =
+      Value{BuiltinFunc([](const std::vector<Value> &args) -> Value {
+        if (args.size() != 2 || !args[0].is_string() || !args[1].is_int()) {
+          throw std::runtime_error(
+              "rsi() expects a string (symbol) and an integer (period).");
+        }
+        return Value(50.0 - args[0].as_string().length() +
+                     args[1].as_int() * 0.2);
+      })};
+
+  environment["macd"] =
+      Value{BuiltinFunc([](const std::vector<Value> &args) -> Value {
+        if (args.size() != 1 || !args[0].is_string()) {
+          throw std::runtime_error(
+              "macd() expects one string argument (ticker symbol).");
+        }
+        return Value(0.5 + args[0].as_string().length() * 0.12);
+      })};
+}
+
+// Helper function for evaluating left-associative binary operator chains
+Value evaluate_binary_op_chain(
+    const std::vector<chisel::Parser::Node> &children) {
+  Value left = interpreter(const_cast<chisel::Parser::Node *>(&children[0]));
+
+  for (size_t i = 1; i < children.size(); i += 2) {
+    const auto &op_token = children[i].get_token();
+    Value right =
+        interpreter(const_cast<chisel::Parser::Node *>(&children[i + 1]));
+
+    switch (op_token.get_type()) {
+    case chisel::Token::PLUS:
+      left = left + right;
+      break;
+    case chisel::Token::MINUS:
+      left = left - right;
+      break;
+    case chisel::Token::MUL:
+      left = left * right;
+      break;
+    case chisel::Token::DIV:
+      left = left / right;
+      break;
+    case chisel::Token::EQEQ:
+      left = (left == right);
+      break;
+    case chisel::Token::NEQ:
+      left = (left != right);
+      break;
+    case chisel::Token::LT:
+      left = (left < right);
+      break;
+    case chisel::Token::GT:
+      left = (left > right);
+      break;
+    case chisel::Token::LTE:
+      left = (left <= right);
+      break;
+    case chisel::Token::GTE:
+      left = (left >= right);
+      break;
+    default:
+      throw std::runtime_error("Unknown binary operator in chain.");
+    }
+  }
+  return left;
+}
+
+// The main entry point and recursive evaluation function
+Value interpreter(chisel::Parser::Node *node_ptr) {
+  if (!node_ptr) {
+    return Value();
+  }
+
+  if (node_ptr->holds_token()) {
+    const auto &token = node_ptr->get_token();
+    switch (token.get_type()) {
+    case chisel::Token::INT:
+      return Value(std::stoll(token.get_data()));
+    case chisel::Token::FLOAT:
+      return Value(std::stod(token.get_data()));
+    case chisel::Token::STRING:
+      return Value(std::string(token.get_data()));
+    case chisel::Token::ID: {
+      std::string var_name = token.get_data();
+      if (environment.count(var_name)) {
+        return environment.at(var_name);
+      }
+      throw std::runtime_error("Undefined variable: " + var_name);
+    }
+    default:
+      // Tokens like operators are handled by their parent ParseNodes
+      return Value();
+    }
+  }
+
+  const auto *p_node = node_ptr->get_node();
+  const auto &children = p_node->get_children();
+
+  switch (p_node->get_type()) {
+  case chisel::Parser::ParseNode::PROGRAM: {
+    setup_environment();
+    Value last_val;
+    for (const auto &child : children) {
+      last_val = interpreter(const_cast<chisel::Parser::Node *>(&child));
+    }
+    return last_val;
+  }
+  case chisel::Parser::ParseNode::STATEMENT:
+  case chisel::Parser::ParseNode::EXPRESSION:
+    return interpreter(const_cast<chisel::Parser::Node *>(&children[0]));
+
+  case chisel::Parser::ParseNode::ASSIGNMENT: {
+    const std::string var_name = children[0].get_token().get_data();
+    Value val = interpreter(const_cast<chisel::Parser::Node *>(&children[2]));
+    environment[var_name] = val;
+    return val;
+  }
+
+  case chisel::Parser::ParseNode::OR_EXPR: {
+    Value result =
+        interpreter(const_cast<chisel::Parser::Node *>(&children[0]));
+    for (size_t i = 1; i < children.size(); i += 2) {
+      if (result.is_truthy())
+        return result; // Short-circuit
+      result =
+          interpreter(const_cast<chisel::Parser::Node *>(&children[i + 1]));
+    }
+    return result;
+  }
+
+  case chisel::Parser::ParseNode::AND_EXPR: {
+    Value result =
+        interpreter(const_cast<chisel::Parser::Node *>(&children[0]));
+    for (size_t i = 1; i < children.size(); i += 2) {
+      if (!result.is_truthy())
+        return result; // Short-circuit
+      result =
+          interpreter(const_cast<chisel::Parser::Node *>(&children[i + 1]));
+    }
+    return result;
+  }
+
+  case chisel::Parser::ParseNode::COMP_EXPR:
+  case chisel::Parser::ParseNode::ARITH_EXPR:
+  case chisel::Parser::ParseNode::TERM:
+    return evaluate_binary_op_chain(children);
+
+  case chisel::Parser::ParseNode::FACTOR: {
+    if (children.size() == 1) { // ID, INT, FLOAT, STRING, FUNCTION_CALL
+      return interpreter(const_cast<chisel::Parser::Node *>(&children[0]));
+    }
+    if (children.size() == 3) { // ( EXPRESSION )
+      return interpreter(const_cast<chisel::Parser::Node *>(&children[1]));
+    }
+    throw std::runtime_error("Invalid FACTOR structure.");
+  }
+
+  case chisel::Parser::ParseNode::FUNCTION_CALL: {
+    const std::string func_name = children[0].get_token().get_data();
+
+    auto it = environment.find(func_name);
+    if (it == environment.end() || !it->second.is_function()) {
+      throw std::runtime_error("Call to undefined or non-function: " +
+                               func_name);
+    }
+    const auto &func = std::get<BuiltinFunc>(it->second.data);
+
+    std::vector<Value> args;
+    if (children.size() == 4) { // Call with arguments: ID ( ARGS )
+      const auto &args_node = children[2];
+      const auto &arg_children = args_node.get_node()->get_children();
+
+      // First argument
+      args.push_back(
+          interpreter(const_cast<chisel::Parser::Node *>(&arg_children[0])));
+      // Subsequent arguments
+      for (size_t i = 1; i < arg_children.size(); i += 2) {
+        args.push_back(interpreter(
+            const_cast<chisel::Parser::Node *>(&arg_children[i + 1])));
+      }
+    } // else: Call with no arguments: ID ( )
+
+    return func(args);
+  }
+  case chisel::Parser::ParseNode::ARGS:
+    throw std::runtime_error("ARGS node should not be evaluated directly.");
+  }
+
+  return Value();
+}
+```
+END ASSISTANT OUTPUT

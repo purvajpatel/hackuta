@@ -3,7 +3,7 @@ from flask import Flask, render_template, request, jsonify, send_file
 from dotenv import load_dotenv
 
 from lib.generator import generate_program
-
+from lib.inthppgenerator import generate_inthpp
 
 load_dotenv()
 app = Flask(__name__)
@@ -43,7 +43,7 @@ def generate():
     return jsonify({'template': template, 'example': example})
 
 @app.route('/generate_inthpp', methods=['POST'])
-def generate_inthpp():
+def gen_inthpp():
     data = request.json
     chisel = data.get('chisel')
     inthpp = generate_inthpp(chisel)

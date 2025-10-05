@@ -1,0 +1,153 @@
+STAGE_ONE: START HERE
+Given the following example spec. Give me a new spec with NO COMMENTS that works for a simple language and for chained operations like or and and, precedence goes from left to right (e.g. Make sure FUNCTION calls are parsed before IDs), and give example code to run. We will do the actual parse tree generation script that gives you the root node of the parse tree for your program. 
+IMPORTANT!
+
+Use the spec_tool to auto generate a parser for your spec
+
+The following is an example of what you would send to the parser generator
+
+The user request for the following was: Generate me a pythonic language with advanced stock market builtin functions for technical analysis.
+```
+PROGRAM = STATEMENT+;
+STATEMENT = ASSIGNMENT | EXPRESSION;
+ASSIGNMENT = ID EQ EXPRESSION;
+EXPRESSION = OR_EXPR;
+OR_EXPR = AND_EXPR (OR AND_EXPR)*;
+AND_EXPR = COMP_EXPR (AND COMP_EXPR)*;
+COMP_EXPR = ARITH_EXPR ((EQEQ | NEQ | LT | GT | LTE | GTE) ARITH_EXPR)?;
+ARITH_EXPR = TERM ((PLUS | MINUS) TERM)*;
+TERM = FACTOR ((MUL | DIV) FACTOR)*;
+FACTOR = FUNCTION_CALL | ID | FLOAT | INT | STRING | LPAREN EXPRESSION RPAREN;
+FUNCTION_CALL = ID LPAREN ARGS? RPAREN;
+ARGS = EXPRESSION (COMMA EXPRESSION)*;
+
+tok EQ = "="
+tok OR = "or"
+tok AND = "and"
+tok EQEQ = "=="
+tok NEQ = "!="
+tok LT = "<"
+tok GT = ">"
+tok LTE = "<="
+tok GTE = ">="
+tok PLUS = "+"
+tok MINUS = "-"
+tok MUL = "*"
+tok DIV = "/"
+tok LPAREN = "("
+tok RPAREN = ")"
+tok COMMA = ","
+
+tok (
+        ID = (std::istream &s) {
+                if (s.eof()) return Token::failed;
+                auto start_pos = s.tellg();
+                std::string buf;
+                auto c = s.get();
+                if (std::isalpha(c) || c == '_') {
+                        buf.push_back(c);
+                        while (!s.eof()) {
+                                c = s.get();
+                                if (std::isalnum(c) || c == '_') {
+                                        buf.push_back(c);
+                                } else {
+                                        s.unget();
+                                        break;
+                                }
+                        }
+                        if (buf == "or" || buf == "and") {
+                                s.seekg(start_pos);
+                                return Token::failed;
+                        }
+                        char *buffer = new char[buf.size() + 1];
+                        memcpy(buffer, buf.data(), buf.size());
+                        buffer[buf.size()] = 0;
+                        return { Token::ID, buffer };
+                }
+                s.unget();
+                return Token::failed;
+        }
+
+        FLOAT = (std::istream &s) {
+                if (s.eof()) return Token::failed;
+                auto start_pos = s.tellg();
+                std::string buf;
+                char c = s.get();
+                while(std::isdigit(c)) {
+                        buf.push_back(c);
+                        if(s.eof()) break;
+                        c = s.get();
+                }
+                s.unget();
+                if (s.peek() == '.') {
+                        buf.push_back(s.get());
+                        while (!s.eof()){
+                                c = s.get();
+                                if(std::isdigit(c)) {
+                                        buf.push_back(c);
+                                } else {
+                                        s.unget();
+                                        break;
+                                }
+                        }
+                } else {
+                        s.seekg(start_pos);
+                        return Token::failed;
+                }
+                if (buf.empty() || buf.back() == '.') {
+                        s.seekg(start_pos);
+                        return Token::failed;
+                }
+                char *buffer = new char[buf.size() + 1];
+                memcpy(buffer, buf.data(), buf.size());
+                buffer[buf.size()] = 0;
+                return { Token::FLOAT, buffer };
+        }
+
+        INT = (std::istream &s) {
+                if (s.eof()) return Token::failed;
+                auto start_pos = s.tellg();
+                std::string buf;
+                char c = s.get();
+                while (std::isdigit(c)) {
+                        buf.push_back(c);
+                        if (s.eof()) break;
+                        c = s.get();
+                }
+                s.unget();
+                if (buf.empty()) {
+                        s.seekg(start_pos);
+                        return Token::failed;
+                }
+                char *buffer = new char[buf.size() + 1];
+                memcpy(buffer, buf.data(), buf.size());
+                buffer[buf.size()] = 0;
+                return { Token::INT, buffer };
+        }
+
+        STRING = (std::istream &s) {
+                if (s.eof() || s.peek() != '"') return Token::failed;
+                s.get();
+                std::string buf;
+                for (char c = s.get(); c != '"'; c = s.get()) {
+                        if (s.eof()) return Token::failed;
+                        buf.push_back(c);
+                }
+                char *buffer = new char[buf.size() + 1];
+                memcpy(buffer, buf.data(), buf.size());
+                buffer[buf.size()] = 0;
+                return { Token::STRING, buffer };
+        }
+)
+
+skip (
+        WHITESPACE = (std::istream &s) {
+                while (!s.eof() && std::isspace(s.peek())) {
+                        s.get();
+                }
+        }
+)
+```
+
+Here is an explanation of the above syntax: Everything is organized into either tokens prefixed by 'tok' or nothing signifying a construct (a parse node). A token is a simple structure holding string data if needed and an enum tag telling what the token is. Tokens allow for a c++ function (without the name or return type) to be specified as shown above, though C++ syntax does not work for constructs. Only chains of tokens with basic regex is allowed. Make sure to include EOF checks (i.g. if !s.eof()). skip tokens should return void
+DO NOT add semicolons randomly, tokens do not have semicolons.  NONtokens always have semicolons

@@ -1,0 +1,40 @@
+STAGE_THREE: PREREQ: SUCCESSFUL STAGE_ONE CALL AND SUCCESSFUL STAGE_TWO CALL
+
+Great! Now you are tasked with creating an example file that complies with your generated spec and int.hpp file.
+
+Use your tools. The example_tool takes in your example and prints out the output using the generated binary from STAGE_TWO
+
+Constraints:
+- No comments in code.
+
+Optionals:
+- IF and ONLY IF your function supports prints statements, include such print statements in your example file for running
+
+
+The following is an example of an example_tool that interprets the following user prompt:
+
+USER: Generate me a pythonic language with advanced stock market builtin functions for technical analysis.
+ASSISTANT OUTPUT:
+```
+golden_cross = sma("AAPL", 50) > sma("AAPL", 200)
+oversold = rsi("MSFT", 14) < 30
+buy_signal = golden_cross and oversold
+
+portfolio_value = price("GOOG") * 100 + price("TSLA") * 50
+stop_loss = price("NVDA") < 450.50
+
+complex_check = (macd("SPY") > 0 and rsi("SPY", 14) < 70) or price("SPY") > 500.00
+
+print(golden_cross)
+print(oversold)
+print(buy_signal)
+print(portfolio_value)
+print(stop_loss)
+print(complex_check)
+print("yuh!")
+
+
+print("hello" + " WORLD" + 5 + 10)
+```
+
+For your FINAL_OUTPUT. Generate a brief documentation for your new language.
