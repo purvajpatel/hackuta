@@ -137,26 +137,30 @@ class AITerminal {
         });
     }
 
-    downloadInterpreter() {
+    async downloadInterpreter() {
         try {
-            const backend = this.currentProgram?.backend;
-            // Try to infer interpreter content from backend fields used in dedalus: likely 'inthpp'
-            const content = backend?.inthpp || backend?.int || backend?.interpreter || '';
-            if (!content) {
-                this.addConsoleLine('No interpreter available. Generate a program first.', 'error');
-                return;
-            }
-            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
+            this.addConsoleLine('Preparing interpreter download...', 'info');
+            const res = await fetch('/download', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            if (!res.ok) throw new Error(`Download failed with status ${res.status}`);
+            
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'int.hpp';
+            a.download = 'forge.zip';
             document.body.appendChild(a);
             a.click();
-            a.remove();
-            URL.revokeObjectURL(url);
-        } catch (e) {
-            this.addConsoleLine('Failed to download interpreter.', 'error');
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            this.addConsoleLine('Interpreter files downloaded as forge.zip', 'success');
+        } catch (err) {
+            console.error('Download error:', err);
+            this.addConsoleLine(`Download failed: ${err.message}`, 'error');
         }
     }
 
