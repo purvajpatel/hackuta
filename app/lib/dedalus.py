@@ -29,13 +29,18 @@ def spec_tool(input: str) -> str:
     output = subprocess.run(f"cd {CHISEL_DIR} && go run main.go {os.path.join(os.path.dirname(__file__), 'spec.txt')}", capture_output=True, shell=True, text=True)
     stdout, stderr = output.stdout, output.stderr
 
-    with open(os.path.join(CHISEL_DIR, 'chisel.hpp'), 'r') as f:
-        hpp = f.read()
-
-    compressd_hpp = compress_hpp_file(hpp)
-    print(compressd_hpp)
-
-    return compressd_hpp
+    hpp_path = os.path.join(CHISEL_DIR, 'chisel.hpp')
+    try:
+        with open(hpp_path, 'r') as f:
+            hpp = f.read()
+        compressd_hpp = compress_hpp_file(hpp)
+        print(compressd_hpp)
+        return compressd_hpp
+    except FileNotFoundError:
+        # Surface a clear error back to the calling agent instead of raising
+        err_msg = f"Go generation did not produce chisel.hpp. returncode={output.returncode}\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}"
+        print(err_msg)
+        return err_msg
 
 def int_tool(input: str) -> str:
     '''
