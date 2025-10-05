@@ -42,6 +42,13 @@ def generate():
 
     return jsonify({'template': template, 'example': example})
 
+@app.route('/generate_inthpp', methods=['POST'])
+def generate_inthpp():
+    data = request.json
+    chisel = data.get('chisel')
+    inthpp = generate_inthpp(chisel)
+    return jsonify({'inthpp': inthpp})
+
 
 
 if __name__ == '__main__':

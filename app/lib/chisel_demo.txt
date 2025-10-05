@@ -1,0 +1,1767 @@
+#include <istream>
+#ifndef CHISEL_TOKEN_HPP
+#define CHISEL_TOKEN_HPP
+
+#include <cstring>
+#include <ostream>
+#include <iostream>
+
+namespace chisel {
+
+	int tabs = 0;
+
+	class Token {
+	public:
+		enum Type {
+			/**/EQ,
+OR,
+AND,
+EQEQ,
+NEQ,
+LT,
+GT,
+LTE,
+GTE,
+PLUS,
+MINUS,
+MUL,
+DIV,
+LPAREN,
+RPAREN,
+COMMA,
+ID,
+FLOAT,
+INT,
+STRING,
+WHITESPACE,
+/**/
+		};
+
+	private:
+		Type type;
+		char *data;
+
+		static char failed_data;
+	public:
+		Token() = default;
+		Token(Type type, char *data) : type(type), data(data) {}
+		Token(const Token &other) : type(other.type) {
+			if (!other) {
+				data = other.data;
+			} else if (other.data) {
+				auto len = strlen(other.data);
+				data = new char[len + 1];
+				memcpy(data, other.data, len);
+				data[len] = 0;
+			} else {
+				data = nullptr;
+			}
+		}
+		Token(Token &&other) : type(other.type), data(other.data) {
+			other.data = nullptr;
+		}
+		~Token() {
+			if (data != &failed_data)
+				delete[] data;
+		}
+
+		Token &operator=(const Token &other) {
+			type = other.type;
+			if (!other) {
+				data = other.data;
+			} else if (other.data) {
+				auto len = strlen(other.data);
+				data = new char[len + 1];
+				memcpy(data, other.data, len);
+				data[len] = 0;
+			} else {
+				data = nullptr;
+			}
+			return *this;
+		}
+		Token &operator=(Token &&other) {
+			type = other.type;
+			data = other.data;
+			other.data = nullptr;
+			return *this;
+		}
+
+		friend std::ostream &operator<<(std::ostream &strm, const Token& token) {
+			for (int i = 0; i < tabs; ++i) strm << "     ";
+			strm << "(T)  Type: " << token.type << '\n';
+			for (int i = 0; i < tabs; ++i) strm << "     ";
+			strm << "     Data: ";
+			if (!token.data) strm << "null\n";
+			else if (token.data == failed.data) strm << "failed\n";
+			else strm << std::string(token.data) << '\n';
+			return strm;
+		}
+
+		Type get_type() const { return type; }
+		char *get_data() { return data; }
+		const char *get_data() const { return data; }
+
+		void set_type(Type type) {
+			this->type = type;
+		}
+		void set_data(char *data) {
+			delete[] this->data;
+			this->data = data;
+		}
+
+		static Token failed;
+		operator bool() const {
+			return data != failed.data;
+		}
+
+		/**/static Token token_EQ(std::istream &);
+static Token token_OR(std::istream &);
+static Token token_AND(std::istream &);
+static Token token_EQEQ(std::istream &);
+static Token token_NEQ(std::istream &);
+static Token token_LT(std::istream &);
+static Token token_GT(std::istream &);
+static Token token_LTE(std::istream &);
+static Token token_GTE(std::istream &);
+static Token token_PLUS(std::istream &);
+static Token token_MINUS(std::istream &);
+static Token token_MUL(std::istream &);
+static Token token_DIV(std::istream &);
+static Token token_LPAREN(std::istream &);
+static Token token_RPAREN(std::istream &);
+static Token token_COMMA(std::istream &);
+static Token token_ID(std::istream &);
+static Token token_FLOAT(std::istream &);
+static Token token_INT(std::istream &);
+static Token token_STRING(std::istream &);
+static void token_WHITESPACE(std::istream &);
+static void skip(std::istream &reader);
+/**/
+	};
+
+	char Token::failed_data = 'a';
+	Token Token::failed = Token(static_cast<Token::Type>(0), &Token::failed_data);
+
+	/**/
+			Token Token::token_EQ(std::istream &reader) {
+				char buf[1];
+				reader.read(buf, 1);
+				auto n = reader.gcount();
+				if (n != 1) {
+					reader.clear();
+					reader.seekg(-n, std::ios::cur);
+					return Token::failed;
+				}
+				if (strncmp(buf, "=", 1) == 0)
+					return Token(Token::Type::EQ, nullptr);
+				reader.clear();
+				reader.seekg(-1, std::ios::cur);
+				return Token::failed;
+			}
+			
+
+			Token Token::token_OR(std::istream &reader) {
+				char buf[2];
+				reader.read(buf, 2);
+				auto n = reader.gcount();
+				if (n != 2) {
+					reader.clear();
+					reader.seekg(-n, std::ios::cur);
+					return Token::failed;
+				}
+				if (strncmp(buf, "or", 2) == 0)
+					return Token(Token::Type::OR, nullptr);
+				reader.clear();
+				reader.seekg(-2, std::ios::cur);
+				return Token::failed;
+			}
+			
+
+			Token Token::token_AND(std::istream &reader) {
+				char buf[3];
+				reader.read(buf, 3);
+				auto n = reader.gcount();
+				if (n != 3) {
+					reader.clear();
+					reader.seekg(-n, std::ios::cur);
+					return Token::failed;
+				}
+				if (strncmp(buf, "and", 3) == 0)
+					return Token(Token::Type::AND, nullptr);
+				reader.clear();
+				reader.seekg(-3, std::ios::cur);
+				return Token::failed;
+			}
+			
+
+			Token Token::token_EQEQ(std::istream &reader) {
+				char buf[2];
+				reader.read(buf, 2);
+				auto n = reader.gcount();
+				if (n != 2) {
+					reader.clear();
+					reader.seekg(-n, std::ios::cur);
+					return Token::failed;
+				}
+				if (strncmp(buf, "==", 2) == 0)
+					return Token(Token::Type::EQEQ, nullptr);
+				reader.clear();
+				reader.seekg(-2, std::ios::cur);
+				return Token::failed;
+			}
+			
+
+			Token Token::token_NEQ(std::istream &reader) {
+				char buf[2];
+				reader.read(buf, 2);
+				auto n = reader.gcount();
+				if (n != 2) {
+					reader.clear();
+					reader.seekg(-n, std::ios::cur);
+					return Token::failed;
+				}
+				if (strncmp(buf, "!=", 2) == 0)
+					return Token(Token::Type::NEQ, nullptr);
+				reader.clear();
+				reader.seekg(-2, std::ios::cur);
+				return Token::failed;
+			}
+			
+
+			Token Token::token_LT(std::istream &reader) {
+				char buf[1];
+				reader.read(buf, 1);
+				auto n = reader.gcount();
+				if (n != 1) {
+					reader.clear();
+					reader.seekg(-n, std::ios::cur);
+					return Token::failed;
+				}
+				if (strncmp(buf, "<", 1) == 0)
+					return Token(Token::Type::LT, nullptr);
+				reader.clear();
+				reader.seekg(-1, std::ios::cur);
+				return Token::failed;
+			}
+			
+
+			Token Token::token_GT(std::istream &reader) {
+				char buf[1];
+				reader.read(buf, 1);
+				auto n = reader.gcount();
+				if (n != 1) {
+					reader.clear();
+					reader.seekg(-n, std::ios::cur);
+					return Token::failed;
+				}
+				if (strncmp(buf, ">", 1) == 0)
+					return Token(Token::Type::GT, nullptr);
+				reader.clear();
+				reader.seekg(-1, std::ios::cur);
+				return Token::failed;
+			}
+			
+
+			Token Token::token_LTE(std::istream &reader) {
+				char buf[2];
+				reader.read(buf, 2);
+				auto n = reader.gcount();
+				if (n != 2) {
+					reader.clear();
+					reader.seekg(-n, std::ios::cur);
+					return Token::failed;
+				}
+				if (strncmp(buf, "<=", 2) == 0)
+					return Token(Token::Type::LTE, nullptr);
+				reader.clear();
+				reader.seekg(-2, std::ios::cur);
+				return Token::failed;
+			}
+			
+
+			Token Token::token_GTE(std::istream &reader) {
+				char buf[2];
+				reader.read(buf, 2);
+				auto n = reader.gcount();
+				if (n != 2) {
+					reader.clear();
+					reader.seekg(-n, std::ios::cur);
+					return Token::failed;
+				}
+				if (strncmp(buf, ">=", 2) == 0)
+					return Token(Token::Type::GTE, nullptr);
+				reader.clear();
+				reader.seekg(-2, std::ios::cur);
+				return Token::failed;
+			}
+			
+
+			Token Token::token_PLUS(std::istream &reader) {
+				char buf[1];
+				reader.read(buf, 1);
+				auto n = reader.gcount();
+				if (n != 1) {
+					reader.clear();
+					reader.seekg(-n, std::ios::cur);
+					return Token::failed;
+				}
+				if (strncmp(buf, "+", 1) == 0)
+					return Token(Token::Type::PLUS, nullptr);
+				reader.clear();
+				reader.seekg(-1, std::ios::cur);
+				return Token::failed;
+			}
+			
+
+			Token Token::token_MINUS(std::istream &reader) {
+				char buf[1];
+				reader.read(buf, 1);
+				auto n = reader.gcount();
+				if (n != 1) {
+					reader.clear();
+					reader.seekg(-n, std::ios::cur);
+					return Token::failed;
+				}
+				if (strncmp(buf, "-", 1) == 0)
+					return Token(Token::Type::MINUS, nullptr);
+				reader.clear();
+				reader.seekg(-1, std::ios::cur);
+				return Token::failed;
+			}
+			
+
+			Token Token::token_MUL(std::istream &reader) {
+				char buf[1];
+				reader.read(buf, 1);
+				auto n = reader.gcount();
+				if (n != 1) {
+					reader.clear();
+					reader.seekg(-n, std::ios::cur);
+					return Token::failed;
+				}
+				if (strncmp(buf, "*", 1) == 0)
+					return Token(Token::Type::MUL, nullptr);
+				reader.clear();
+				reader.seekg(-1, std::ios::cur);
+				return Token::failed;
+			}
+			
+
+			Token Token::token_DIV(std::istream &reader) {
+				char buf[1];
+				reader.read(buf, 1);
+				auto n = reader.gcount();
+				if (n != 1) {
+					reader.clear();
+					reader.seekg(-n, std::ios::cur);
+					return Token::failed;
+				}
+				if (strncmp(buf, "/", 1) == 0)
+					return Token(Token::Type::DIV, nullptr);
+				reader.clear();
+				reader.seekg(-1, std::ios::cur);
+				return Token::failed;
+			}
+			
+
+			Token Token::token_LPAREN(std::istream &reader) {
+				char buf[1];
+				reader.read(buf, 1);
+				auto n = reader.gcount();
+				if (n != 1) {
+					reader.clear();
+					reader.seekg(-n, std::ios::cur);
+					return Token::failed;
+				}
+				if (strncmp(buf, "(", 1) == 0)
+					return Token(Token::Type::LPAREN, nullptr);
+				reader.clear();
+				reader.seekg(-1, std::ios::cur);
+				return Token::failed;
+			}
+			
+
+			Token Token::token_RPAREN(std::istream &reader) {
+				char buf[1];
+				reader.read(buf, 1);
+				auto n = reader.gcount();
+				if (n != 1) {
+					reader.clear();
+					reader.seekg(-n, std::ios::cur);
+					return Token::failed;
+				}
+				if (strncmp(buf, ")", 1) == 0)
+					return Token(Token::Type::RPAREN, nullptr);
+				reader.clear();
+				reader.seekg(-1, std::ios::cur);
+				return Token::failed;
+			}
+			
+
+			Token Token::token_COMMA(std::istream &reader) {
+				char buf[1];
+				reader.read(buf, 1);
+				auto n = reader.gcount();
+				if (n != 1) {
+					reader.clear();
+					reader.seekg(-n, std::ios::cur);
+					return Token::failed;
+				}
+				if (strncmp(buf, ",", 1) == 0)
+					return Token(Token::Type::COMMA, nullptr);
+				reader.clear();
+				reader.seekg(-1, std::ios::cur);
+				return Token::failed;
+			}
+			
+Token Token::token_ID (std::istream &s){
+                if (s.eof()) return Token::failed;
+                auto start_pos = s.tellg();
+                std::string buf;
+                auto c = s.get();
+                if (std::isalpha(c) || c == '_') {
+                        buf.push_back(c);
+                        while (!s.eof()) {
+                                c = s.get();
+                                if (std::isalnum(c) || c == '_') {
+                                        buf.push_back(c);
+                                } else {
+                                        s.unget();
+                                        break;
+                                }
+                        }
+                        if (buf == "or" || buf == "and") {
+                                s.seekg(start_pos);
+                                return Token::failed;
+                        }
+                        char *buffer = new char[buf.size() + 1];
+                        memcpy(buffer, buf.data(), buf.size());
+                        buffer[buf.size()] = 0;
+                        return { Token::ID, buffer };
+                }
+                s.unget();
+                return Token::failed;
+        }
+Token Token::token_FLOAT (std::istream &s){
+                if (s.eof()) return Token::failed;
+                auto start_pos = s.tellg();
+                std::string buf;
+                char c = s.get();
+                while(std::isdigit(c)) {
+                        buf.push_back(c);
+                        if(s.eof()) break;
+                        c = s.get();
+                }
+                s.unget();
+                if (s.peek() == '.') {
+                        buf.push_back(s.get());
+                        while (!s.eof()){
+                                c = s.get();
+                                if(std::isdigit(c)) {
+                                        buf.push_back(c);
+                                } else {
+                                        s.unget();
+                                        break;
+                                }
+                        }
+                } else {
+                        s.seekg(start_pos);
+                        return Token::failed;
+                }
+                if (buf.empty() || buf.back() == '.') {
+                        s.seekg(start_pos);
+                        return Token::failed;
+                }
+                char *buffer = new char[buf.size() + 1];
+                memcpy(buffer, buf.data(), buf.size());
+                buffer[buf.size()] = 0;
+                return { Token::FLOAT, buffer };
+        }
+Token Token::token_INT (std::istream &s){
+                if (s.eof()) return Token::failed;
+                auto start_pos = s.tellg();
+                std::string buf;
+                char c = s.get();
+                while (std::isdigit(c)) {
+                        buf.push_back(c);
+                        if (s.eof()) break;
+                        c = s.get();
+                }
+                s.unget();
+                if (buf.empty()) {
+                        s.seekg(start_pos);
+                        return Token::failed;
+                }
+                char *buffer = new char[buf.size() + 1];
+                memcpy(buffer, buf.data(), buf.size());
+                buffer[buf.size()] = 0;
+                return { Token::INT, buffer };
+        }
+Token Token::token_STRING (std::istream &s){
+                if (s.eof() || s.peek() != '"') return Token::failed;
+                s.get();
+                std::string buf;
+                for (char c = s.get(); c != '"'; c = s.get()) {
+                        if (s.eof()) return Token::failed;
+                        buf.push_back(c);
+                }
+                char *buffer = new char[buf.size() + 1];
+                memcpy(buffer, buf.data(), buf.size());
+                buffer[buf.size()] = 0;
+                return { Token::STRING, buffer };
+        }
+void Token::token_WHITESPACE (std::istream &s){
+                while (!s.eof() && std::isspace(s.peek())) {
+                        s.get();
+                }
+        }
+void Token::skip(std::istream &reader) {
+Token::token_WHITESPACE(reader);
+}
+/**/
+
+}
+
+#endif // CHISEL_TOKEN_HPP
+#ifndef CHISEL_LEXER_HPP
+#define CHISEL_LEXER_HPP
+
+#include <deque>
+#include <istream>
+#include <sys/types.h>
+// #include "Token.hpp"
+
+namespace chisel {
+
+	class Lexer {
+		std::istream *reader;
+		std::deque<Token> tokens;
+	public:
+		Lexer(std::istream &reader) : reader(&reader) {}
+		Lexer(const Lexer &) = default;
+		Lexer(Lexer &&other) : reader(other.reader), tokens(std::move(other.tokens)) {
+			other.reader = nullptr;
+			other.tokens.clear();
+		}
+		~Lexer() = default;
+
+		Lexer &operator=(const Lexer &) = default;
+		Lexer &operator=(Lexer &&other) {
+			reader = other.reader;
+			tokens = std::move(other.tokens);
+			other.tokens.clear();
+			other.reader = nullptr;
+			return *this;
+		}
+
+		void cache_back(Token &&token) {
+			tokens.emplace_back(token);
+		}
+		void cache_front(Token &&token) {
+			tokens.emplace_front(token);
+		}
+
+		Token lex() {
+			/**/Token token;
+token = Token::token_EQ(*this->reader);
+if (token) return token;token = Token::token_OR(*this->reader);
+if (token) return token;token = Token::token_AND(*this->reader);
+if (token) return token;token = Token::token_EQEQ(*this->reader);
+if (token) return token;token = Token::token_NEQ(*this->reader);
+if (token) return token;token = Token::token_LT(*this->reader);
+if (token) return token;token = Token::token_GT(*this->reader);
+if (token) return token;token = Token::token_LTE(*this->reader);
+if (token) return token;token = Token::token_GTE(*this->reader);
+if (token) return token;token = Token::token_PLUS(*this->reader);
+if (token) return token;token = Token::token_MINUS(*this->reader);
+if (token) return token;token = Token::token_MUL(*this->reader);
+if (token) return token;token = Token::token_DIV(*this->reader);
+if (token) return token;token = Token::token_LPAREN(*this->reader);
+if (token) return token;token = Token::token_RPAREN(*this->reader);
+if (token) return token;token = Token::token_COMMA(*this->reader);
+if (token) return token;token = Token::token_ID(*this->reader);
+if (token) return token;token = Token::token_FLOAT(*this->reader);
+if (token) return token;token = Token::token_INT(*this->reader);
+if (token) return token;token = Token::token_STRING(*this->reader);
+if (token) return token;return Token::failed;/**/
+		}
+	};
+
+}
+
+#endif // CHISEL_LEXER_HPP
+#ifndef CHISEL_PARSER_HPP
+#define CHISEL_PARSER_HPP
+
+// #include "Lexer.hpp"
+// #include "Token.hpp"
+#include <istream>
+#include <vector>
+
+namespace chisel {
+
+	class Parser {
+		Lexer lexer;
+
+	public:
+		class ParseNode;
+
+		class Node {
+		private:
+			union {
+				Token token;
+				ParseNode *node;
+			};
+			bool leaf;
+			bool delete_handler;
+
+		public:
+			Node(const Node &other) : leaf(other.leaf) {
+				const_cast<Node &>(other).delete_handler = false;
+				delete_handler = true;
+				if (leaf)
+					token = other.token;
+				else
+					node = other.node;
+			}
+			Node(Token &&token) : token(std::move(token)), leaf(true), delete_handler(true) {}
+			Node(ParseNode *node) : node(node), leaf(false), delete_handler(true) {}
+			~Node() {
+				if (delete_handler) {
+					if (leaf)
+						token.~Token();
+					else
+						delete node;
+					delete_handler = false;
+				}
+			}
+
+			bool holds_token() const { return leaf; }
+			bool holds_node() const { return !leaf; }
+
+			Token &get_token() { return token; }
+			const Token &get_token() const { return token; }
+
+			ParseNode *get_node() { return node; }
+			const ParseNode *get_node() const { return node; }
+
+			static Node failed;
+
+			operator bool() const {
+				return !holds_node() || get_node() != nullptr;
+			}
+
+			friend std::ostream &operator<<(std::ostream &strm, const Parser::Node &node);
+		};
+
+		class ParseNode {
+		public:
+			enum Type {
+				/**/PROGRAM,
+STATEMENT,
+ASSIGNMENT,
+EXPRESSION,
+OR_EXPR,
+AND_EXPR,
+COMP_EXPR,
+ARITH_EXPR,
+TERM,
+FACTOR,
+FUNCTION_CALL,
+ARGS,
+/**/
+			};
+		private:
+			Type type;
+			std::vector<Node> children;
+		public:
+			ParseNode(Type type) : type(type), children() {}
+			~ParseNode() = default;
+
+			Type get_type() const { return type; }
+			std::vector<Node> &get_children() { return children; }
+			const std::vector<Node> &get_children() const { return children; }
+
+			friend std::ostream &operator<<(std::ostream &strm, const ParseNode& node) {
+				for (int i = 0; i < tabs; ++i) strm << "     ";
+				strm << "(PN) Type: " << node.type << '\n';
+				for (int i = 0; i < tabs; ++i) strm << "     ";
+				strm << "     Children:\n";
+				++tabs;
+				for (auto &child : node.children)
+					strm << child;
+				--tabs;
+				return strm;
+			}
+		};
+
+	private:
+		/**/
+		
+		static bool parse_nested_1(std::istream &,std::vector<Parser::Node> &);
+		
+		static bool parse_multiplier_1(std::istream &,std::vector<Parser::Node> &);
+		
+		
+		static bool parse_nested_2(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_nested_3(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_or_1(std::istream &,std::vector<Parser::Node> &);
+		
+		
+		static bool parse_unit_1(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_unit_2(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_nested_4(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_chain_1(std::istream &,std::vector<Parser::Node> &);
+		
+		static bool parse_nested_5(std::istream &,std::vector<Parser::Node> &);
+		
+		
+		static bool parse_nested_6(std::istream &,std::vector<Parser::Node> &);
+		
+
+		
+		
+		static bool parse_unit_3(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_nested_7(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_chain_3(std::istream &,std::vector<Parser::Node> &);
+		
+		static bool parse_multiplier_2(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_chain_2(std::istream &,std::vector<Parser::Node> &);
+		
+		
+		static bool parse_nested_8(std::istream &,std::vector<Parser::Node> &);
+		
+
+		
+		
+		static bool parse_unit_4(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_nested_9(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_chain_5(std::istream &,std::vector<Parser::Node> &);
+		
+		static bool parse_multiplier_3(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_chain_4(std::istream &,std::vector<Parser::Node> &);
+		
+		
+		static bool parse_nested_10(std::istream &,std::vector<Parser::Node> &);
+		
+
+		
+		
+		
+		static bool parse_unit_5(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_unit_6(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_unit_7(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_unit_8(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_unit_9(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_unit_10(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_or_2(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_nested_11(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_chain_7(std::istream &,std::vector<Parser::Node> &);
+		
+		static bool parse_optional_1(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_chain_6(std::istream &,std::vector<Parser::Node> &);
+		
+		
+		static bool parse_nested_12(std::istream &,std::vector<Parser::Node> &);
+		
+
+		
+		
+		
+		static bool parse_unit_11(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_unit_12(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_or_3(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_nested_13(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_chain_9(std::istream &,std::vector<Parser::Node> &);
+		
+		static bool parse_multiplier_4(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_chain_8(std::istream &,std::vector<Parser::Node> &);
+		
+		
+		static bool parse_nested_14(std::istream &,std::vector<Parser::Node> &);
+		
+
+		
+		
+		
+		static bool parse_unit_13(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_unit_14(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_or_4(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_nested_15(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_chain_11(std::istream &,std::vector<Parser::Node> &);
+		
+		static bool parse_multiplier_5(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_chain_10(std::istream &,std::vector<Parser::Node> &);
+		
+		
+		static bool parse_nested_16(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_unit_15(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_unit_16(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_unit_17(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_unit_18(std::istream &,std::vector<Parser::Node> &);
+		
+
+		
+		static bool parse_unit_19(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_nested_17(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_unit_20(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_chain_12(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_or_5(std::istream &,std::vector<Parser::Node> &);
+		
+		
+		static bool parse_unit_21(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_unit_22(std::istream &,std::vector<Parser::Node> &);
+		
+
+		
+		static bool parse_nested_18(std::istream &,std::vector<Parser::Node> &);
+		
+		static bool parse_optional_2(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_unit_23(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_chain_13(std::istream &,std::vector<Parser::Node> &);
+		
+		
+		static bool parse_nested_19(std::istream &,std::vector<Parser::Node> &);
+		
+
+		
+		
+		static bool parse_unit_24(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_nested_20(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_chain_15(std::istream &,std::vector<Parser::Node> &);
+		
+		static bool parse_multiplier_6(std::istream &,std::vector<Parser::Node> &);
+		
+
+		static bool parse_chain_14(std::istream &,std::vector<Parser::Node> &);
+		/**/
+
+	public:
+		Parser(std::istream &reader) : lexer(reader) {}
+		~Parser() = default;
+
+		/**/static Node construct_PROGRAM(std::istream &);
+static Node construct_STATEMENT(std::istream &);
+static Node construct_ASSIGNMENT(std::istream &);
+static Node construct_EXPRESSION(std::istream &);
+static Node construct_OR_EXPR(std::istream &);
+static Node construct_AND_EXPR(std::istream &);
+static Node construct_COMP_EXPR(std::istream &);
+static Node construct_ARITH_EXPR(std::istream &);
+static Node construct_TERM(std::istream &);
+static Node construct_FACTOR(std::istream &);
+static Node construct_FUNCTION_CALL(std::istream &);
+static Node construct_ARGS(std::istream &);
+/**/
+	};
+
+	/**/
+		Parser::Node Parser::construct_PROGRAM(std::istream &reader) {
+			Node node(new ParseNode(ParseNode::Type::PROGRAM));
+			if (!parse_multiplier_1(reader,node.get_node()->get_children())) {
+				return Node::failed;
+			}
+			return node;
+		}
+		
+
+		Parser::Node Parser::construct_STATEMENT(std::istream &reader) {
+			Node node(new ParseNode(ParseNode::Type::STATEMENT));
+			if (!parse_or_1(reader,node.get_node()->get_children())) {
+				return Node::failed;
+			}
+			return node;
+		}
+		
+
+		Parser::Node Parser::construct_ASSIGNMENT(std::istream &reader) {
+			Node node(new ParseNode(ParseNode::Type::ASSIGNMENT));
+			if (!parse_chain_1(reader,node.get_node()->get_children())) {
+				return Node::failed;
+			}
+			return node;
+		}
+		
+
+		Parser::Node Parser::construct_EXPRESSION(std::istream &reader) {
+			Node node(new ParseNode(ParseNode::Type::EXPRESSION));
+			if (!parse_nested_5(reader,node.get_node()->get_children())) {
+				return Node::failed;
+			}
+			return node;
+		}
+		
+
+		Parser::Node Parser::construct_OR_EXPR(std::istream &reader) {
+			Node node(new ParseNode(ParseNode::Type::OR_EXPR));
+			if (!parse_chain_2(reader,node.get_node()->get_children())) {
+				return Node::failed;
+			}
+			return node;
+		}
+		
+
+		Parser::Node Parser::construct_AND_EXPR(std::istream &reader) {
+			Node node(new ParseNode(ParseNode::Type::AND_EXPR));
+			if (!parse_chain_4(reader,node.get_node()->get_children())) {
+				return Node::failed;
+			}
+			return node;
+		}
+		
+
+		Parser::Node Parser::construct_COMP_EXPR(std::istream &reader) {
+			Node node(new ParseNode(ParseNode::Type::COMP_EXPR));
+			if (!parse_chain_6(reader,node.get_node()->get_children())) {
+				return Node::failed;
+			}
+			return node;
+		}
+		
+
+		Parser::Node Parser::construct_ARITH_EXPR(std::istream &reader) {
+			Node node(new ParseNode(ParseNode::Type::ARITH_EXPR));
+			if (!parse_chain_8(reader,node.get_node()->get_children())) {
+				return Node::failed;
+			}
+			return node;
+		}
+		
+
+		Parser::Node Parser::construct_TERM(std::istream &reader) {
+			Node node(new ParseNode(ParseNode::Type::TERM));
+			if (!parse_chain_10(reader,node.get_node()->get_children())) {
+				return Node::failed;
+			}
+			return node;
+		}
+		
+
+		Parser::Node Parser::construct_FACTOR(std::istream &reader) {
+			Node node(new ParseNode(ParseNode::Type::FACTOR));
+			if (!parse_or_5(reader,node.get_node()->get_children())) {
+				return Node::failed;
+			}
+			return node;
+		}
+		
+
+		Parser::Node Parser::construct_FUNCTION_CALL(std::istream &reader) {
+			Node node(new ParseNode(ParseNode::Type::FUNCTION_CALL));
+			if (!parse_chain_13(reader,node.get_node()->get_children())) {
+				return Node::failed;
+			}
+			return node;
+		}
+		
+
+		Parser::Node Parser::construct_ARGS(std::istream &reader) {
+			Node node(new ParseNode(ParseNode::Type::ARGS));
+			if (!parse_chain_14(reader,node.get_node()->get_children())) {
+				return Node::failed;
+			}
+			return node;
+		}
+		
+/**/
+
+	/**/
+			
+		bool Parser::parse_nested_1(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_STATEMENT(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+			bool Parser::parse_multiplier_1(std::istream &reader, std::vector<Parser::Node> &nodes) {
+				Token::skip(reader);
+				auto start = reader.tellg();
+				auto first = parse_nested_1(reader,nodes);
+				if (!first) {
+					reader.clear();
+					reader.seekg(start, std::ios::beg);
+					return false;
+				}
+				for (auto result = first; result; result = parse_nested_1(reader,nodes)) {
+					start = reader.tellg();
+				}
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+				return true;
+			}
+			
+		
+		bool Parser::parse_nested_2(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_ASSIGNMENT(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+
+		bool Parser::parse_nested_3(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_EXPRESSION(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+
+		bool Parser::parse_or_1(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_nested_2(reader,nodes)) || (parse_nested_3(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		
+		
+		bool Parser::parse_unit_1(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_ID(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_unit_2(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_EQ(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_nested_4(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_EXPRESSION(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+
+		bool Parser::parse_chain_1(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_unit_1(reader,nodes)) && (parse_unit_2(reader,nodes)) && (parse_nested_4(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		
+		bool Parser::parse_nested_5(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_OR_EXPR(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+		
+		bool Parser::parse_nested_6(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_AND_EXPR(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+
+		
+		
+		bool Parser::parse_unit_3(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_OR(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_nested_7(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_AND_EXPR(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+
+		bool Parser::parse_chain_3(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_unit_3(reader,nodes)) && (parse_nested_7(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		
+		bool Parser::parse_multiplier_2(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			for (auto result = parse_chain_3(reader,nodes); result; result = parse_chain_3(reader,nodes)) {
+				start = reader.tellg();
+			}
+			reader.clear();
+			reader.seekg(start, std::ios::beg);
+			return true;
+		}
+		
+
+		bool Parser::parse_chain_2(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_nested_6(reader,nodes)) && (parse_multiplier_2(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		
+		
+		bool Parser::parse_nested_8(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_COMP_EXPR(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+
+		
+		
+		bool Parser::parse_unit_4(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_AND(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_nested_9(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_COMP_EXPR(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+
+		bool Parser::parse_chain_5(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_unit_4(reader,nodes)) && (parse_nested_9(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		
+		bool Parser::parse_multiplier_3(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			for (auto result = parse_chain_5(reader,nodes); result; result = parse_chain_5(reader,nodes)) {
+				start = reader.tellg();
+			}
+			reader.clear();
+			reader.seekg(start, std::ios::beg);
+			return true;
+		}
+		
+
+		bool Parser::parse_chain_4(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_nested_8(reader,nodes)) && (parse_multiplier_3(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		
+		
+		bool Parser::parse_nested_10(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_ARITH_EXPR(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+
+		
+		
+		
+		bool Parser::parse_unit_5(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_EQEQ(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_unit_6(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_NEQ(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_unit_7(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_LT(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_unit_8(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_GT(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_unit_9(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_LTE(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_unit_10(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_GTE(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_or_2(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_unit_5(reader,nodes)) || (parse_unit_6(reader,nodes)) || (parse_unit_7(reader,nodes)) || (parse_unit_8(reader,nodes)) || (parse_unit_9(reader,nodes)) || (parse_unit_10(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		
+
+		bool Parser::parse_nested_11(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_ARITH_EXPR(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+
+		bool Parser::parse_chain_7(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_or_2(reader,nodes)) && (parse_nested_11(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		
+		bool Parser::parse_optional_1(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			if (!parse_chain_7(reader,nodes)) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+				return true;
+			}
+			return true;
+		}
+		
+
+		bool Parser::parse_chain_6(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_nested_10(reader,nodes)) && (parse_optional_1(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		
+		
+		bool Parser::parse_nested_12(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_TERM(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+
+		
+		
+		
+		bool Parser::parse_unit_11(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_PLUS(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_unit_12(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_MINUS(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_or_3(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_unit_11(reader,nodes)) || (parse_unit_12(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		
+
+		bool Parser::parse_nested_13(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_TERM(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+
+		bool Parser::parse_chain_9(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_or_3(reader,nodes)) && (parse_nested_13(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		
+		bool Parser::parse_multiplier_4(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			for (auto result = parse_chain_9(reader,nodes); result; result = parse_chain_9(reader,nodes)) {
+				start = reader.tellg();
+			}
+			reader.clear();
+			reader.seekg(start, std::ios::beg);
+			return true;
+		}
+		
+
+		bool Parser::parse_chain_8(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_nested_12(reader,nodes)) && (parse_multiplier_4(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		
+		
+		bool Parser::parse_nested_14(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_FACTOR(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+
+		
+		
+		
+		bool Parser::parse_unit_13(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_MUL(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_unit_14(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_DIV(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_or_4(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_unit_13(reader,nodes)) || (parse_unit_14(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		
+
+		bool Parser::parse_nested_15(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_FACTOR(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+
+		bool Parser::parse_chain_11(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_or_4(reader,nodes)) && (parse_nested_15(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		
+		bool Parser::parse_multiplier_5(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			for (auto result = parse_chain_11(reader,nodes); result; result = parse_chain_11(reader,nodes)) {
+				start = reader.tellg();
+			}
+			reader.clear();
+			reader.seekg(start, std::ios::beg);
+			return true;
+		}
+		
+
+		bool Parser::parse_chain_10(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_nested_14(reader,nodes)) && (parse_multiplier_5(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		
+		
+		bool Parser::parse_nested_16(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_FUNCTION_CALL(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+
+		bool Parser::parse_unit_15(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_ID(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_unit_16(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_FLOAT(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_unit_17(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_INT(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_unit_18(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_STRING(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		
+		bool Parser::parse_unit_19(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_LPAREN(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_nested_17(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_EXPRESSION(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+
+		bool Parser::parse_unit_20(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_RPAREN(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_chain_12(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_unit_19(reader,nodes)) && (parse_nested_17(reader,nodes)) && (parse_unit_20(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		
+
+		bool Parser::parse_or_5(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_nested_16(reader,nodes)) || (parse_unit_15(reader,nodes)) || (parse_unit_16(reader,nodes)) || (parse_unit_17(reader,nodes)) || (parse_unit_18(reader,nodes)) || (parse_chain_12(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		
+		
+		bool Parser::parse_unit_21(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_ID(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_unit_22(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_LPAREN(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		
+		bool Parser::parse_nested_18(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_ARGS(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+		bool Parser::parse_optional_2(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			if (!parse_nested_18(reader,nodes)) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+				return true;
+			}
+			return true;
+		}
+		
+
+		bool Parser::parse_unit_23(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_RPAREN(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_chain_13(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_unit_21(reader,nodes)) && (parse_unit_22(reader,nodes)) && (parse_optional_2(reader,nodes)) && (parse_unit_23(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		
+		
+		bool Parser::parse_nested_19(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_EXPRESSION(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+
+		
+		
+		bool Parser::parse_unit_24(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto token = Token::token_COMMA(reader); // already undoes on fail so we gucci
+			if (token) nodes.emplace_back(std::move(token));
+			return token;
+		}
+		
+
+		bool Parser::parse_nested_20(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto construct = construct_EXPRESSION(reader); // Should automatically undo on fail so we still gucci
+			if (construct) nodes.emplace_back(construct);
+			return construct;
+		}
+		
+
+		bool Parser::parse_chain_15(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_unit_24(reader,nodes)) && (parse_nested_20(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		
+		bool Parser::parse_multiplier_6(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			for (auto result = parse_chain_15(reader,nodes); result; result = parse_chain_15(reader,nodes)) {
+				start = reader.tellg();
+			}
+			reader.clear();
+			reader.seekg(start, std::ios::beg);
+			return true;
+		}
+		
+
+		bool Parser::parse_chain_14(std::istream &reader, std::vector<Parser::Node> &nodes) {
+			Token::skip(reader);
+			auto start = reader.tellg();
+			bool result = (parse_nested_19(reader,nodes)) && (parse_multiplier_6(reader,nodes));
+			if (!result) {
+				reader.clear();
+				reader.seekg(start, std::ios::beg);
+			}
+			return result;
+		}
+		/**/
+
+	Parser::Node Parser::Node::failed = Parser::Node(nullptr);
+
+	std::ostream &operator<<(std::ostream &strm, const Parser::Node &node) {
+		if (node.holds_token())
+			return strm << node.get_token();
+		return strm << *node.get_node();
+	}
+}
+
+#endif // CHISEL_PARSER_HPP

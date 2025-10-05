@@ -1,0 +1,8 @@
+golden_cross = sma("AAPL", 50) > sma("AAPL", 200)
+oversold = rsi("MSFT", 14) < 30
+buy_signal = golden_cross and oversold
+
+portfolio_value = price("GOOG") * 100 + price("TSLA") * 50
+stop_loss = price("NVDA") < 450.50
+
+complex_check = (macd("SPY") > 0 and rsi("SPY", 14) < 70) or price("SPY") > 500.00

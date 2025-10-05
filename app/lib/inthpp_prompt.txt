@@ -1,0 +1,7 @@
+Now here is the generated chisel.hpp file from the parser generator, please create the interpreter based on this information. The entry point of the interpreter should be a global function called **interpreter** and it MUST be called interpreter that takes exactly 1 node parameter and interprets the tree accordingly. Make sure to include builtins in the environment
+The entry point of the function must be a NODE **pointer** as per the spec, do not interchange between pointer and reference for the entry point, ONLY use a pointer.
+
+You are ALSO given the SPEC and EXAMPLE that you generated EARLIER for the BUILTINS that also need to be included in the environment.
+
+DO NOT include ANY natural language, just the code block with the code. 
+NO MAIN FUNCTION, entrypoint is defined with your interpreter function, your main function WILL cause an error 
