@@ -91,7 +91,7 @@ async def main(description: str):
 
     result = await runner.run(
         input= description + dedalus_stage_one + dedalus_stage_two + dedalus_stage_three,
-        model="gemini/gemini-2.5-pro", 
+        model="gemini/gemini-2.5-flash", 
         tools=[spec_tool, int_tool, example_tool]
     )
 
