@@ -1,2 +1,4 @@
 app/.env
 .venv/
+.vscode/
+.vscode/settings.json

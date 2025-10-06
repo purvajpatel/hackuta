@@ -1,5 +1,7 @@
 STAGE_ONE: START HERE
-Given the following example spec. Give me a new spec with NO COMMENTS that works for a simple language and for chained operations like or and and, precedence goes from left to right (e.g. Make sure FUNCTION calls are parsed before IDs), and give example code to run. We will do the actual parse tree generation script that gives you the root node of the parse tree for your program. 
+
+USER REQUEST TAKES PRIORITY OVER ANYTHING
+
 IMPORTANT!
 
 Use the spec_tool to auto generate a parser for your spec

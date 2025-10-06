@@ -6,6 +6,7 @@ Use your tools. The example_tool takes in your example and prints out the output
 
 Constraints:
 - No comments in code.
+- DO NOT have input or infinite loops in your example
 
 Optionals:
 - IF and ONLY IF your function supports prints statements, include such print statements in your example file for running

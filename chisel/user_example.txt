@@ -13,8 +13,3 @@ print(buy_signal)
 print(portfolio_value)
 print(stop_loss)
 print(complex_check)
-print("yuh!")
-
-
-print("hello" + " WORLD" + 5 + 10)
-print("I love computer")
